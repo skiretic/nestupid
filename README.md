@@ -12,7 +12,7 @@ This project aims to approximate the inner workings of the NES hardware, includi
 
 *   **CPU**: Complete 6502 instruction set emulation (official opcodes).
 *   **PPU**: Cycle-based rendering pipeline with background scrolling, nametable mirroring, and 8x8/8x16 sprite support.
-*   **Memory**: Standard memory map implementation including internal RAM, PPU registers, and cartridge mapping (NROM).
+*   **Memory**: Standard memory map implementation including internal RAM, PPU registers, and cartridge mapping (NROM, MMC1).
 *   **Graphics**: SDL2-based framebuffer rendering.
 *   **Input**: Keyboard-mapped controller input support.
 
@@ -56,7 +56,7 @@ Run the emulator by passing a valid `.nes` ROM file as an argument.
 ./NEStupid.app/Contents/MacOS/NEStupid ../smb.nes
 ```
 
-*Note: The emulator currently supports **NROM** mapper games (e.g., Super Mario Bros, Donkey Kong). Advanced mappers (MMC1, MMC3) are in development.*
+*Note: The emulator currently supports **NROM** (0) and **MMC1** (1) mapper games (e.g., Super Mario Bros, The Legend of Zelda). Advanced mappers (MMC3) are in development.*
 
 ## Controls
 
@@ -76,7 +76,7 @@ The emulator currently maps **Controller 1** to the keyboard:
 - [x] **PPU**: Background fetching, scrolling, and Sprite 0 Hit detection.
 - [x] **Sprites**: Secondary OAM evaluation and 8-sprite limit enforcement.
 - [ ] **APU**: Audio Processing Unit (Not yet implemented).
-- [ ] **Mappers**: Basic NROM is functional. MMC support is planned.
+- [x] **Mappers**: NROM (0) and MMC1 (1) are functional. MMC3 support is planned.
 
 ## License
 
