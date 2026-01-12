@@ -39,6 +39,29 @@ int main() {
     return 1;
   }
 
+  // Test Triangle Channel
+  // Enable Triangle (Bit 2 of 0x4015, | existing)
+  apu_write_reg(0x4015, 0x01 | 0x04);
+
+  // Write Triangle Linear Counter (0xFF)
+  apu_write_reg(0x4008, 0xFF);
+
+  // Write Triangle Timer Low
+  apu_write_reg(0x400A, 0x00);
+
+  // Write Triangle Timer High + Length (Length index 0 -> 10)
+  apu_write_reg(0x400B, 0x00);
+
+  apu_step();
+
+  status = apu_read_reg(0x4015);
+  // Bit 2 should be 1
+  if ((status & 0x04) == 0) {
+    printf("Status Reg: %02X\n", status);
+    printf("FAIL: Triangle not active in Status register\n");
+    return 1;
+  }
+
   printf("Basic APU test passed\n");
   return 0;
 }

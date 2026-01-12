@@ -125,6 +125,25 @@ static void apu_write_pulse(APU_Pulse *p, uint8_t reg, uint8_t val) {
   }
 }
 
+static void apu_write_triangle(APU_Triangle *t, uint8_t reg, uint8_t val) {
+  switch (reg) {
+  case 0:
+    t->length_halt = (val & 0x80) != 0;
+    t->linear_counter_reload = val & 0x7F;
+    break;
+  case 2:
+    t->timer_period = (t->timer_period & 0x0700) | val;
+    break;
+  case 3:
+    t->timer_period = (t->timer_period & 0x00FF) | ((val & 0x07) << 8);
+    if (t->enabled) {
+      t->length_counter = length_table[(val >> 3) & 0x1F];
+    }
+    t->reload_linear = true;
+    break;
+  }
+}
+
 void apu_init(void) {
   printf("APU Init\n");
   apu_reset();
@@ -138,8 +157,6 @@ void apu_reset(void) {
 
 void apu_step(void) {
   // TODO: Implement APU frame counter and channels
-  // For now, simple stepping placeholders could go here,
-  // but keeping it empty as per plan until next tasks
 }
 
 uint8_t apu_read_reg(uint16_t addr) {
@@ -199,9 +216,16 @@ void apu_write_reg(uint16_t addr, uint8_t val) {
     apu_write_pulse(&apu.pulse2, 3, val);
     break;
 
-  case 0x4008: // Triangle
+  case 0x4008:
+    apu_write_triangle(&apu.triangle, 0, val);
+    break;
   case 0x400A:
+    apu_write_triangle(&apu.triangle, 2, val);
+    break;
   case 0x400B:
+    apu_write_triangle(&apu.triangle, 3, val);
+    break;
+
   case 0x400C: // Noise
   case 0x400E:
   case 0x400F:
