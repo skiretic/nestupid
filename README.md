@@ -19,6 +19,7 @@ This project aims to approximate the inner workings of the NES hardware, includi
     *   **Key Binding Window**: Dedicated native window to remap controller buttons to any keyboard key (including modifiers like Shift/Ctrl).
 *   **Graphics**: SDL2-based framebuffer rendering.
 *   **Input**: Remappable keyboard-mapped controller input.
+*   **APU Core**: Foundational 2A03 audio processing logic (Pulse, Triangle, Noise, Frame Counter). *Audio output mixing and SDL integration are currently in development.*
 
 ## Prerequisites
 
@@ -88,7 +89,7 @@ The emulator maps **Controller 1** to the keyboard. Default bindings are:
 - [x] **CPU**: Cycle-accurate instruction execution.
 - [x] **PPU**: Background fetching, scrolling, and Sprite 0 Hit detection.
 - [x] **Sprites**: Secondary OAM evaluation and 8-sprite limit enforcement.
-- [ ] **APU**: Audio Processing Unit (Not yet implemented).
+- [/] **APU**: Foundational 2A03 audio logic (Pulse, Triangle, Noise channels) implemented. Mixer and SDL integration in progress.
 - [x] **Mappers**: NROM (0) and MMC1 (1) are functional. MMC3 support is planned.
 - [x] **GUI**: Native macOS integration (Menu, Open ROM, Key Config).
 
