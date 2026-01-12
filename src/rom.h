@@ -9,6 +9,8 @@
 #define MIRRORING_HORIZONTAL 0
 #define MIRRORING_VERTICAL 1
 #define MIRRORING_FOUR_SCREEN 2
+#define MIRRORING_ONE_SCREEN_LO 3
+#define MIRRORING_ONE_SCREEN_HI 4
 
 typedef struct {
   uint8_t magic[4];     // "NES" + 0x1A

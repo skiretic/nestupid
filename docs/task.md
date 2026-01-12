@@ -42,11 +42,21 @@
     - [x] Implement `src/ppu.h` & VRAM Map <!-- id: 40 -->
     - [x] Implement Registers ($2000-$2007) <!-- id: 41 -->
     - [x] Implement Memory Integration (DMA) <!-- id: 42 -->
-    - [ ] Implement Rendering Loop (Internal Verified, Visual Broken) <!-- id: 43 -->
+    - [x] Implement Rendering Loop (Internal Verified, Visual Broken) <!-- id: 43 -->
     - [x] Verify Registers with LLDB (Done via logs) <!-- id: 44 -->
 - [x] Phase 3.5: PPU Sprites <!-- id: 45 -->
     - [x] Implement Secondary OAM & Evaluation <!-- id: 46 -->
     - [x] Implement Sprite Fetching & Shifters <!-- id: 47 -->
     - [x] Implement Sprite Rendering & Priority <!-- id: 48 -->
     - [x] Verify Sprites (Visual/LLDB) <!-- id: 49 -->
-- [ ] Phase 4: Input & Integration (Future) <!-- id: 16 -->
+- [x] **Phase 4: Input - Implement Controller Support**
+    - [x] Standard Controller (Read/Strobe)
+    - [x] Input SDL Integration
+- [ ] **Phase 5: Mappers**
+    - [x] Mapper Interface Design
+    - [x] MMC1 Implementation
+    - [ ] MMC3 Implementation
+- [ ] **Phase 6: APU**
+    - [ ] Pulse Channels
+    - [ ] Triangle/Noise/DMC
+    - [ ] Audio Mixer

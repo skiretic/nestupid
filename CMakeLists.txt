@@ -12,6 +12,7 @@ set(SOURCES
     src/gui.c
     src/rom.c
     src/memory.c
+    src/mapper.c
     src/cpu.c
     src/ppu.c
     src/input.c

@@ -49,5 +49,18 @@ while (app.running) {
 
 - **`cpu.c`**: Pure instruction execution. Knows nothing about PPU/Input, only calls `bus_read()` and `bus_write()`.
 - **`ppu.c`**: Renders pixels to an internal buffer. exposes `ppu_read/write` for CPU register access.
-- **`memory.c`**: The "Bus". Dispatches reads/writes to correct components (RAM, PPU, Cartridge).
-- **`cartridge.c`**: Abstract interface for loading ROMs and handling mappers (reads/writes to `$8000+`).
+- **`memory.c`**: The "Bus". Dispatches reads/writes to correct components (RAM, PPU, Mapper).
+- **`mapper.c`**: Handles Cartridge memory mapping logic. Implements NROM, MMC1, etc., and controls PRG/CHR banking and mirroring.
+- **`rom.c`**: Responsible for loading the ROM file and parsing the iNES header.
+
+## Mappers
+
+Mappers are implemented using a unified interface (`mapper.h`) that intercepts CPU and PPU reads/writes to cartridge space:
+
+- **CPU Read/Write**: Addresses `$4020-$FFFF` (Cartridge Space) are routed to `mapper_cpu_read` / `mapper_cpu_write`.
+- **PPU Read/Write**: Addresses `$0000-$1FFF` (Pattern Tables) are routed to `mapper_ppu_read` / `mapper_ppu_write`.
+- **Mirroring**: PPU Nametable access ($2000-$3EFF) queries `mapper_get_mirroring()` to determine physical address.
+
+Supported Mappers:
+- **Mapper 0 (NROM)**: Standard 16KB/32KB PRG, 8KB CHR.
+- **Mapper 1 (MMC1)**: Shift-register based banking, dynamic mirroring. (Used by *Zelda*, *Metroid*)

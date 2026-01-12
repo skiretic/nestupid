@@ -1,5 +1,6 @@
 #include "ppu.h"
 #include "cpu.h"
+#include "mapper.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -45,28 +46,31 @@ static void ppu_increment_vaddr(void) {
 // Helper for Nametable Mirroring
 static uint16_t ppu_mirror_nametable_addr(uint16_t addr) {
   addr &= 0x0FFF;
+  uint8_t mirroring = mapper_get_mirroring();
 
-  if (ppu.rom && ppu.rom->mirroring == 1) { // Vertical
+  if (mirroring == MIRRORING_VERTICAL) {
     if (addr & 0x0400)
       return 1024 + (addr & 0x03FF);
     else
       return (addr & 0x03FF);
-  } else { // Horizontal
+  } else if (mirroring == MIRRORING_HORIZONTAL) {
     if (addr & 0x0800)
       return 1024 + (addr & 0x03FF);
     else
       return (addr & 0x03FF);
+  } else if (mirroring == MIRRORING_ONE_SCREEN_LO) {
+    return addr & 0x03FF;
+  } else if (mirroring == MIRRORING_ONE_SCREEN_HI) {
+    return 1024 + (addr & 0x03FF);
   }
+  return addr & 0x03FF; // Default fail-safe
 }
 
 static uint8_t ppu_vram_read(uint16_t addr) {
   addr &= 0x3FFF;
 
   if (addr < 0x2000) {
-    if (ppu.rom && ppu.rom->chr_data) {
-      return ppu.rom->chr_data[addr % ppu.rom->chr_size];
-    }
-    return 0;
+    return mapper_ppu_read(addr);
   }
 
   if (addr < 0x3F00) {
@@ -91,9 +95,7 @@ static uint8_t ppu_vram_read(uint16_t addr) {
 static void ppu_vram_write(uint16_t addr, uint8_t val) {
   addr &= 0x3FFF;
   if (addr < 0x2000) {
-    if (ppu.rom && ppu.rom->is_chr_ram) {
-      ppu.rom->chr_data[addr] = val;
-    }
+    mapper_ppu_write(addr, val);
   } else if (addr < 0x3F00) {
     ppu.nametables[ppu_mirror_nametable_addr(addr)] = val;
   } else if (addr >= 0x3F00) {
