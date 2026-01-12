@@ -28,18 +28,18 @@
     - [x] Create `scripts/run_all_tests.sh` <!-- id: 29 -->
     - [x] Verify Build & Launch <!-- id: 30 -->
 - [x] Phase 1: ROM Loading <!-- id: 13 -->
-    - [x] Implement ROM Loader (`src/rom.c`) <!-- id: 31 -->
-    - [x] Implement Memory Bus (`src/memory.c`) <!-- id: 32 -->
+    - [x] Implement ROM Loader (`src/rom/rom.c`) <!-- id: 31 -->
+    - [x] Implement Memory Bus (`src/memory/memory.c`) <!-- id: 32 -->
     - [x] Integrate Loader into Main <!-- id: 33 -->
     - [x] Automated Testing (LLDB) <!-- id: 34 -->
 - [x] Phase 2: CPU <!-- id: 14 -->
-    - [x] Implement `src/cpu.h` (State, Flags) <!-- id: 35 -->
+    - [x] Implement `src/cpu/cpu.h` (State, Flags) <!-- id: 35 -->
     - [x] Implement Addressing Modes <!-- id: 36 -->
     - [x] Implement Official Opcodes <!-- id: 37 -->
     - [x] Implement `cpu_step` / Interrupts <!-- id: 38 -->
     - [x] Verify with `nestest.nes` <!-- id: 39 -->
 - [x] Phase 3: PPU <!-- id: 15 -->
-    - [x] Implement `src/ppu.h` & VRAM Map <!-- id: 40 -->
+    - [x] Implement `src/ppu/ppu.h` & VRAM Map <!-- id: 40 -->
     - [x] Implement Registers ($2000-$2007) <!-- id: 41 -->
     - [x] Implement Memory Integration (DMA) <!-- id: 42 -->
     - [x] Implement Rendering Loop (Internal Verified, Visual Broken) <!-- id: 43 -->
@@ -66,6 +66,6 @@
     - [x] Pulse Channels (1 & 2) <!-- id: 52 -->
     - [x] Triangle Channel <!-- id: 53 -->
     - [x] Noise Channel <!-- id: 54 -->
-    - [/] Frame Counter & Length/Envelope Logic <!-- id: 55 -->
-    - [ ] Mixer & Output Generation <!-- id: 56 -->
+    - [x] Frame Counter & Length/Envelope Logic <!-- id: 55 -->
+    - [/] Mixer & Output Generation <!-- id: 56 -->
     - [ ] SDL Audio Integration <!-- id: 57 -->

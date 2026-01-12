@@ -7,19 +7,20 @@ set(CMAKE_C_STANDARD 11)
 find_package(SDL2 REQUIRED)
 
 # Source files
+# Source files
 set(SOURCES
     src/main.c
-    src/gui.c
-    src/rom.c
-    src/memory.c
-    src/mapper.c
-    src/cpu.c
-    src/ppu.c
-    src/input.c
-    src/input_config.c
-    src/apu.c
-    src/gui_mac.m
-    src/key_mapping_mac.c
+    src/gui/gui.c
+    src/rom/rom.c
+    src/memory/memory.c
+    src/rom/mapper.c
+    src/cpu/cpu.c
+    src/ppu/ppu.c
+    src/input/input.c
+    src/input/input_config.c
+    src/apu/apu.c
+    src/gui/gui_mac.m
+    src/input/key_mapping_mac.c
 )
 
 # App Bundle settings
@@ -32,7 +33,16 @@ set(MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist")
 add_executable(NEStupid MACOSX_BUNDLE ${SOURCES})
 
 # Include directories
-target_include_directories(NEStupid PRIVATE src)
+target_include_directories(NEStupid PRIVATE 
+    src
+    src/apu
+    src/cpu
+    src/gui
+    src/input
+    src/memory
+    src/ppu
+    src/rom
+)
 target_include_directories(NEStupid PRIVATE ${SDL2_INCLUDE_DIRS})
 
 # Link libraries

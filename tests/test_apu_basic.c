@@ -1,5 +1,5 @@
 // tests/test_apu_basic.c
-#include "../src/apu.h"
+#include "../src/apu/apu.h"
 #include <assert.h>
 #include <stdio.h>
 
