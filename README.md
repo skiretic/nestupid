@@ -80,4 +80,6 @@ The emulator currently maps **Controller 1** to the keyboard:
 
 ## License
 
-This project is provided for educational purposes. All rights to the authentic NES hardware and games belong to Nintendo.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+*Note: This project is for educational purposes. All rights to the authentic NES hardware and games belong to Nintendo.*
