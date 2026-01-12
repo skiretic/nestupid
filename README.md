@@ -2,7 +2,7 @@
 
 **NEStupid** is a lightweight, cycle-stepped Nintendo Entertainment System (NES) emulator written in C. It relies on SDL2 for windowing, rendering, and input handling.
 
-This project aims to approximate the inner workings of the NES hardware, including the Ricoh 2A03 CPU (6502 variant) and the Ricoh 2C02 PPU (Picture Processing Unit), with a focus on running classic titles like *Super Mario Bros*.
+This project aims to approximate the inner workings of the NES hardware, including the Ricoh 2A03 CPU (6502 variant) and the Ricoh 2C02 PPU (Picture Processing Unit), with a focus on running classic titles like *CENSORED*.
 
 <div align="center">
   <img src="docs/screenshot.png" alt="NEStupid Screenshot" width="600" />
