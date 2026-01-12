@@ -1,0 +1,24 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.dylib
+NEStupid.app/
+*.dSYM/
+compile_commands.json
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+prompts/
+.DS_Store
+AGENTS.md
+NEStupid-planning-prompt.md
+
+# Roms
+/tests/roms
+*.nes

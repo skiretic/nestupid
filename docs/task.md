@@ -1,0 +1,52 @@
+# Task Checklist
+
+- [x] Phase -1: Planning and Research <!-- id: 0 -->
+    - [x] Setup project structure (`docs/`, `logs/`, `.gitignore`) <!-- id: 1 -->
+    - [x] Research NES Architecture & Hardware <!-- id: 2 -->
+    - [x] Research 6502 CPU (Opcodes, Timing) <!-- id: 3 -->
+    - [x] Research PPU (Pipeline, Memory, Timing) <!-- id: 4 -->
+    - [x] Research iNES/NES 2.0 Formats <!-- id: 5 -->
+    - [x] Create `docs/architecture.md` <!-- id: 6 -->
+    - [x] Create `docs/cpu-design.md` <!-- id: 7 -->
+    - [x] Create `docs/ppu-design.md` <!-- id: 8 -->
+    - [x] Create `docs/rom-format.md` <!-- id: 9 -->
+    - [x] Create `docs/testing-strategy.md` <!-- id: 10 -->
+    - [x] Create `docs/roadmap.md` (Breakdown of Phases 0-4) <!-- id: 11 -->
+    - [x] Research NES Input & Controller Protocol <!-- id: 17 -->
+    - [x] Create `docs/input-design.md` <!-- id: 18 -->
+    - [x] Research NES APU (Pulse, Triangle, Noise, DMC) <!-- id: 19 -->
+    - [x] Create `docs/apu-design.md` <!-- id: 20 -->
+    - [x] Expand `docs/cpu-design.md` with full opcode list <!-- id: 21 -->
+    - [x] Expand `docs/ppu-design.md` with bit-level register definitions <!-- id: 22 -->
+    - [x] Expand `docs/apu-design.md` with bit-level register definitions <!-- id: 23 -->
+- [x] Phase 0: Skeleton & Build <!-- id: 12 -->
+    - [x] Create `src/` directory structure <!-- id: 24 -->
+    - [x] Create `CMakeLists.txt` (SDL2 dependency) <!-- id: 25 -->
+    - [x] Create `src/main.c` (Window & Event Loop) <!-- id: 26 -->
+    - [x] Generate `icon.icns` (Using `nestupid.icns`) <!-- id: 27 -->
+    - [x] Create `Info.plist` & App Bundle logic <!-- id: 28 -->
+    - [x] Create `scripts/run_all_tests.sh` <!-- id: 29 -->
+    - [x] Verify Build & Launch <!-- id: 30 -->
+- [x] Phase 1: ROM Loading <!-- id: 13 -->
+    - [x] Implement ROM Loader (`src/rom.c`) <!-- id: 31 -->
+    - [x] Implement Memory Bus (`src/memory.c`) <!-- id: 32 -->
+    - [x] Integrate Loader into Main <!-- id: 33 -->
+    - [x] Automated Testing (LLDB) <!-- id: 34 -->
+- [x] Phase 2: CPU <!-- id: 14 -->
+    - [x] Implement `src/cpu.h` (State, Flags) <!-- id: 35 -->
+    - [x] Implement Addressing Modes <!-- id: 36 -->
+    - [x] Implement Official Opcodes <!-- id: 37 -->
+    - [x] Implement `cpu_step` / Interrupts <!-- id: 38 -->
+    - [x] Verify with `nestest.nes` <!-- id: 39 -->
+- [x] Phase 3: PPU <!-- id: 15 -->
+    - [x] Implement `src/ppu.h` & VRAM Map <!-- id: 40 -->
+    - [x] Implement Registers ($2000-$2007) <!-- id: 41 -->
+    - [x] Implement Memory Integration (DMA) <!-- id: 42 -->
+    - [ ] Implement Rendering Loop (Internal Verified, Visual Broken) <!-- id: 43 -->
+    - [x] Verify Registers with LLDB (Done via logs) <!-- id: 44 -->
+- [x] Phase 3.5: PPU Sprites <!-- id: 45 -->
+    - [x] Implement Secondary OAM & Evaluation <!-- id: 46 -->
+    - [x] Implement Sprite Fetching & Shifters <!-- id: 47 -->
+    - [x] Implement Sprite Rendering & Priority <!-- id: 48 -->
+    - [x] Verify Sprites (Visual/LLDB) <!-- id: 49 -->
+- [ ] Phase 4: Input & Integration (Future) <!-- id: 16 -->
