@@ -1,9 +1,106 @@
 #include "apu.h"
 #include <stdio.h>
 
-void apu_init(void) { printf("APU Init\n"); }
+#include <stdbool.h>
+#include <string.h>
 
-void apu_reset(void) { printf("APU Reset\n"); }
+typedef struct {
+  uint8_t enabled;
+  uint8_t duty;
+  uint8_t volume;
+  bool constant_volume;
+  bool length_halt; // Also envelope loop
+  uint16_t timer;
+  uint16_t timer_period;
+  uint8_t length_counter;
+  uint8_t envelope_counter;
+  uint8_t envelope_period;
+  bool envelope_start;
+  // Sweep
+  bool sweep_enabled;
+  uint8_t sweep_period;
+  bool sweep_negate;
+  uint8_t sweep_shift;
+  uint8_t sweep_counter;
+  bool sweep_reload;
+  uint8_t duty_pos;
+} APU_Pulse;
+
+typedef struct {
+  uint8_t enabled;
+  uint8_t linear_counter_reload;
+  uint8_t linear_counter;
+  bool length_halt; // Also control flag
+  bool reload_linear;
+  uint16_t timer;
+  uint16_t timer_period;
+  uint8_t length_counter;
+  uint8_t seq_index;
+} APU_Triangle;
+
+typedef struct {
+  uint8_t enabled;
+  bool length_halt; // Also envelope loop
+  bool constant_volume;
+  uint8_t volume;
+  uint8_t envelope_counter;
+  uint8_t envelope_period;
+  bool envelope_start;
+  uint16_t timer;
+  uint16_t timer_period;
+  uint8_t length_counter;
+  uint16_t lfsr;
+  bool mode;
+} APU_Noise;
+
+typedef struct {
+  uint8_t enabled;
+  bool irq_enabled;
+  bool loop;
+  uint16_t rate_index;
+  uint16_t timer;
+  uint16_t timer_period;
+  uint16_t sample_address;
+  uint16_t sample_length;
+  uint16_t current_address;
+  uint16_t bytes_remaining;
+  uint8_t output_level;
+  uint8_t shift_register;
+  uint8_t bits_remaining;
+  bool buffer_empty;
+  uint8_t sample_buffer;
+  bool silence;
+} APU_DMC;
+
+typedef struct {
+  APU_Pulse pulse1;
+  APU_Pulse pulse2;
+  APU_Triangle triangle;
+  APU_Noise noise;
+  APU_DMC dmc;
+
+  uint64_t clock_count;
+  uint8_t frame_counter_mode;
+  bool irq_inhibit;
+  bool frame_irq;
+  bool dmc_irq;
+
+  // 5-step mode or 4-step mode
+  uint16_t frame_step;
+} APU_State;
+
+static APU_State apu;
+
+void apu_init(void) {
+  printf("APU Init\n");
+  apu_reset();
+}
+
+void apu_reset(void) {
+  printf("APU Reset\n");
+  memset(&apu, 0, sizeof(APU_State));
+  apu.noise.lfsr = 1;
+}
 
 void apu_step(void) {
   // TODO: Implement APU frame counter and channels
