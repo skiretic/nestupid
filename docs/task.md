@@ -64,8 +64,8 @@
 - [ ] **Phase 6: APU** <!-- id: 50 -->
     - [x] APU Data Structures & Skeleton <!-- id: 51 -->
     - [x] Pulse Channels (1 & 2) <!-- id: 52 -->
-    - [/] Triangle Channel <!-- id: 53 -->
-    - [ ] Noise Channel <!-- id: 54 -->
+    - [x] Triangle Channel <!-- id: 53 -->
+    - [/] Noise Channel <!-- id: 54 -->
     - [ ] Frame Counter & Length/Envelope Logic <!-- id: 55 -->
     - [ ] Mixer & Output Generation <!-- id: 56 -->
     - [ ] SDL Audio Integration <!-- id: 57 -->

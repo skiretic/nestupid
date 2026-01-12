@@ -62,6 +62,29 @@ int main() {
     return 1;
   }
 
+  // Test Noise Channel
+  // Enable Noise (Bit 3 of 0x4015, | existing)
+  apu_write_reg(0x4015, 0x01 | 0x04 | 0x08);
+
+  // Write Noise Control (0x30 - Vol 0, Loop 1, Env 1)
+  apu_write_reg(0x400C, 0x30);
+
+  // Write Noise Period (0x00)
+  apu_write_reg(0x400E, 0x00);
+
+  // Write Noise Length (Index 0 -> 10)
+  apu_write_reg(0x400F, 0x00);
+
+  apu_step();
+
+  status = apu_read_reg(0x4015);
+  // Bit 3 should be 1
+  if ((status & 0x08) == 0) {
+    printf("Status Reg: %02X\n", status);
+    printf("FAIL: Noise not active in Status register\n");
+    return 1;
+  }
+
   printf("Basic APU test passed\n");
   return 0;
 }

@@ -144,6 +144,26 @@ static void apu_write_triangle(APU_Triangle *t, uint8_t reg, uint8_t val) {
   }
 }
 
+static void apu_write_noise(APU_Noise *n, uint8_t reg, uint8_t val) {
+  switch (reg) {
+  case 0:
+    n->length_halt = (val & 0x20) != 0;
+    n->constant_volume = (val & 0x10) != 0;
+    n->volume = val & 0x0F;
+    break;
+  case 2:
+    n->mode = (val & 0x80) != 0;
+    n->timer_period = val & 0x0F;
+    break;
+  case 3:
+    if (n->enabled) {
+      n->length_counter = length_table[(val >> 3) & 0x1F];
+    }
+    n->envelope_start = true;
+    break;
+  }
+}
+
 void apu_init(void) {
   printf("APU Init\n");
   apu_reset();
@@ -226,9 +246,16 @@ void apu_write_reg(uint16_t addr, uint8_t val) {
     apu_write_triangle(&apu.triangle, 3, val);
     break;
 
-  case 0x400C: // Noise
+  case 0x400C:
+    apu_write_noise(&apu.noise, 0, val);
+    break;
   case 0x400E:
+    apu_write_noise(&apu.noise, 2, val);
+    break;
   case 0x400F:
+    apu_write_noise(&apu.noise, 3, val);
+    break;
+
   case 0x4010: // DMC
   case 0x4011:
   case 0x4012:
@@ -256,8 +283,7 @@ void apu_write_reg(uint16_t addr, uint8_t val) {
     if (!apu.dmc.enabled)
       apu.dmc.bytes_remaining = 0;
     else if (apu.dmc.bytes_remaining == 0) {
-      // If enabled and bytes were 0, restart only if needed (complicated,
-      // skipping for now)
+      // If enabled and bytes were 0, restart only if needed
     }
 
     apu.dmc_irq = false;
