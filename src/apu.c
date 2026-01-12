@@ -175,8 +175,102 @@ void apu_reset(void) {
   apu.noise.lfsr = 1;
 }
 
+static void clock_length(void) {
+  if (!apu.pulse1.length_halt && apu.pulse1.length_counter > 0)
+    apu.pulse1.length_counter--;
+  if (!apu.pulse2.length_halt && apu.pulse2.length_counter > 0)
+    apu.pulse2.length_counter--;
+  if (!apu.triangle.length_halt && apu.triangle.length_counter > 0)
+    apu.triangle.length_counter--;
+  if (!apu.noise.length_halt && apu.noise.length_counter > 0)
+    apu.noise.length_counter--;
+
+  // Triangle Linear Counter (clocked here? No, clocked in Envelope step
+  // technically, wait) Actually Linear Counter is clocked 4 times a frame
+  // (Envelope step). Length is 2 times. Length is clocked on steps 1 and 3
+  // (0-indexed 0,1,2,3 -> Steps 2 and 4 in some docs). Let's stick to standard
+  // NTSC: Mode 0: Step 1 (Env), Step 2 (Env, Len), Step 3 (Env), Step 4 (Env,
+  // Len, IRQ)
+}
+
+static void clock_envelope(void) {
+  // Triangle Linear Counter checks
+  if (apu.triangle.reload_linear) {
+    apu.triangle.linear_counter = apu.triangle.linear_counter_reload;
+  } else if (apu.triangle.linear_counter > 0) {
+    apu.triangle.linear_counter--;
+  }
+  if (!apu.triangle.length_halt)
+    apu.triangle.reload_linear = false;
+
+  // Pulse/Noise Envelopes (TODO: Full envelope logic)
+  // For now we just implement Length Counter logic for the test
+}
+
+// 7457.5 CPU cycles per frame step (approx)
+// We simplify to 7457
+#define FRAME_CYCLES 7457
+
 void apu_step(void) {
-  // TODO: Implement APU frame counter and channels
+  apu.clock_count++;
+
+  if (apu.clock_count >= FRAME_CYCLES) {
+    apu.clock_count = 0;
+    apu.frame_step++;
+
+    // Mode 0: 4-Step Sequence
+    if (apu.frame_counter_mode == 0) {
+      if (apu.frame_step > 3)
+        apu.frame_step = 0;
+
+      switch (apu.frame_step) {
+      case 0:
+        clock_envelope();
+        break;
+      case 1:
+        clock_envelope();
+        clock_length();
+        break;
+      case 2:
+        clock_envelope();
+        break;
+      case 3:
+        clock_envelope();
+        clock_length();
+        if (!apu.irq_inhibit)
+          apu.frame_irq = true;
+        break;
+      }
+    }
+    // Mode 1: 5-Step Sequence
+    else {
+      if (apu.frame_step > 4)
+        apu.frame_step = 0;
+
+      switch (apu.frame_step) {
+      case 0:
+        clock_envelope();
+        break;
+      case 1:
+        clock_envelope();
+        clock_length();
+        break;
+      case 2:
+        clock_envelope();
+        break;
+      case 3:
+        break; // Step 4 does nothing
+      case 4:
+        clock_envelope();
+        clock_length();
+        break;
+      }
+    }
+  }
+
+  // Timers (Clocked every 2 CPU cycles / 1 APU cycle? Or every cycle?)
+  // Pulse/Noise timers decrement every 2 CPU cycles. Triangle every 1.
+  // For now we skip audio generation timers until Mixer task.
 }
 
 uint8_t apu_read_reg(uint16_t addr) {

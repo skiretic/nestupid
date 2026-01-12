@@ -66,8 +66,8 @@ int main() {
   // Enable Noise (Bit 3 of 0x4015, | existing)
   apu_write_reg(0x4015, 0x01 | 0x04 | 0x08);
 
-  // Write Noise Control (0x30 - Vol 0, Loop 1, Env 1)
-  apu_write_reg(0x400C, 0x30);
+  // Write Noise Control (0x10 - Vol 0, Loop 0, Env 1)
+  apu_write_reg(0x400C, 0x10);
 
   // Write Noise Period (0x00)
   apu_write_reg(0x400E, 0x00);
@@ -82,6 +82,23 @@ int main() {
   if ((status & 0x08) == 0) {
     printf("Status Reg: %02X\n", status);
     printf("FAIL: Noise not active in Status register\n");
+    return 1;
+  }
+
+  // Run APU for enough cycles to expire the Length Counter
+  // Index 0 = Length 10. Frame Counter clocks approx every 7457 cycles.
+  // 10 decrements * 2 steps per frame (approx) -> wait.
+  // Just run 300,000 cycles to be safe.
+  printf("Running 300,000 APU steps to expire Length Counter...\n");
+  for (int i = 0; i < 300000; i++) {
+    apu_step();
+  }
+
+  status = apu_read_reg(0x4015);
+  // Bit 3 should be 0 now
+  if ((status & 0x08) != 0) {
+    printf("Status Reg: %02X\n", status);
+    printf("FAIL: Noise Length Counter did not expire\n");
     return 1;
   }
 
