@@ -55,7 +55,12 @@
 - [ ] **Phase 5: Mappers**
     - [x] Mapper Interface Design
     - [x] MMC1 Implementation
+    - [x] MMC1 Implementation
     - [ ] MMC3 Implementation
+- [x] **Phase 5.5: GUI & Usability**
+    - [x] Implement Key Binding Configuration
+    - [x] Implement Native macOS Menu & Window
+    - [x] Implement "Open ROM" Dialog
 - [ ] **Phase 6: APU**
     - [ ] Pulse Channels
     - [ ] Triangle/Noise/DMC

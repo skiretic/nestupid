@@ -59,13 +59,28 @@ void gui_cleanup(void) {
   SDL_Quit();
 }
 
-void gui_poll_events(void) {
+void gui_close_config_window(void) {}
+
+void gui_toggle_config_window(void) {}
+
+bool gui_is_config_open(void) { return false; }
+
+SDL_Scancode gui_poll_events(void) {
   SDL_Event event;
+  SDL_Scancode pressed = SDL_SCANCODE_UNKNOWN;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_QUIT) {
       running = false;
+    } else if (event.type == SDL_KEYDOWN) {
+      // Only return keypresses if they are focused on main window or being
+      // remapped? Actually, main loop logic handles remapping. We should just
+      // return the scancode. But if config window is focused, we might want to
+      // capture keys for remapping. For simple logic: return last key pressed
+      // regardless of window focus.
+      pressed = event.key.keysym.scancode;
     }
   }
+  return pressed;
 }
 
 bool gui_is_running(void) { return running; }
@@ -105,32 +120,22 @@ void gui_update_framebuffer(const uint8_t *nes_framebuffer) {
 
   SDL_RenderClear(renderer);
   SDL_RenderCopy(renderer, texture, NULL, NULL);
-  SDL_RenderPresent(renderer);
+  // SDL_RenderPresent(renderer); // Moved to explicit call
 
   static int frame_count = 0;
   if (frame_count++ % 60 == 0) {
     // Dump Palette
-    const uint8_t *pal = ppu_get_palette(); // Implicitly need declaration in
-                                            // gui.c or include ppu.h
-    // But gui.c doesn't include ppu.h usually? Let's assume we can add the
-    // include or just declare extern. Better to check ppu.h include. Assuming
-    // we can access it via gui_update_framebuffer caller? No, let's just
-    // inspect it here.
-
-    // Need ppu.h included in gui.c? It is not currently.
-    // I will add the include in a separate step or just assume current context.
-    // Let's rely on the user running this.
-    // Check if palette is empty
+    const uint8_t *pal = ppu_get_palette();
     bool empty = true;
     for (int i = 0; i < 32; i++) {
       if (pal[i] != 0)
         empty = false;
     }
-    printf("Palette State: %s\n", empty ? "EMPTY (All 0s)" : "HAS DATA");
-    if (!empty) {
-      for (int i = 0; i < 32; i++)
-        printf("%02X ", pal[i]);
-      printf("\n");
-    }
+    // printf("Palette State: %s\n", empty ? "EMPTY (All 0s)" : "HAS DATA");
   }
+}
+
+void gui_render_present(void) {
+  if (renderer)
+    SDL_RenderPresent(renderer);
 }

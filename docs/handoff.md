@@ -9,6 +9,7 @@ The emulator successfully runs *Super Mario Bros.* (Mapper 0) with full graphics
 - **Input**: SDL2 keyboard mapping to Controller 1.
 - **System**: Basic NROM memory mapping.
 - **Mappers**: MMC1 (Mapper 1) implemented (Support for *Zelda*, *Metroid*).
+- **GUI**: Native macOS integration (Menu, Open ROM, Key Bindings).
 
 ## Known Issues
 - **Timing**: The "Cycle Step" is a hardcoded 1 CPU : 3 PPU loop. It is accurate enough for NTSC but lacks sub-cycle precision or PAL support.
@@ -29,7 +30,6 @@ Implement the 2A03 APU.
 - **Task**: Implement Pulse 1, Pulse 2, Triangle, Noise, and DMC channels. Hook into SDL Audio callback in `gui.c` or main loop.
 
 ### 3. Refactoring (Priority: Low)
-- **GUI**: Add a file picker dialog (using native file dialogs or Dear ImGui) instead of CLI arguments.
 - **Tests**: Integrate `blargg_nes_cpu_test` ROMs for rigorous verification.
 
 ## Useful Commands

@@ -9,7 +9,9 @@ NEStupid implements a standard NES architecture consisting of the following core
 3.  **Memory (RAM/BUS)**: Manages the 64KB CPU address space and the 14-bit PPU address space, verifying mirrors and handling I/O registers.
 4.  **Cartridge (ROM/Mapper)**: Handles ROM data loading and memory mapping logic (Mappers).
 5.  **Input**: Handling controller states.
-6.  **GUI/Platform Layer**: SDL2-based windowing, input polling, and framebuffer display.
+6.  **GUI/Platform Layer**: 
+    -   **SDL2**: Windowing, input polling, and framebuffer display.
+    -   **Native (macOS)**: Cocoa-based menus, file dialogs, and configuration windows for enhanced usability.
 
 ## Execution Loop
 

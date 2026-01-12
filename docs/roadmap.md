@@ -33,6 +33,7 @@
 - [x] Implement Sprite Rendering (OAM).
 - [x] Implement Sprite 0 Hit.
 - [x] **Goal**: Playable standard games (Mapper 0).
+- [x] **GUI**: Native Key Binding & ROM Loading (added per request).
 
 ## Phase 5: Mappers & Compatibility
 - [x] Implement Mapper Interface (virtual functions).

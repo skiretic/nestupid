@@ -16,7 +16,10 @@ set(SOURCES
     src/cpu.c
     src/ppu.c
     src/input.c
+    src/input_config.c
     src/apu.c
+    src/gui_mac.m
+    src/key_mapping_mac.c
 )
 
 # App Bundle settings
@@ -33,7 +36,13 @@ target_include_directories(NEStupid PRIVATE src)
 target_include_directories(NEStupid PRIVATE ${SDL2_INCLUDE_DIRS})
 
 # Link libraries
-target_link_libraries(NEStupid PRIVATE ${SDL2_LIBRARIES})
+# Detect if we are on macOS
+if(APPLE)
+    find_library(COCOA_LIBRARY Cocoa)
+    target_link_libraries(NEStupid ${SDL2_LIBRARIES} ${COCOA_LIBRARY})
+else()
+    target_link_libraries(NEStupid ${SDL2_LIBRARIES})
+endif()
 
 # Copy icon to Resources
 set_source_files_properties(nestupid.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)

@@ -1,8 +1,8 @@
 # NEStupid
 
-**NEStupid** is a lightweight, cycle-stepped Nintendo Entertainment System (NES) emulator written in C. It relies on SDL2 for windowing, rendering, and input handling.
+**NEStupid** is a lightweight, cycle-stepped Nintendo Entertainment System (NES) emulator written in C. It relies on SDL2 for rendering and cross-platform compatibility, while leveraging native platform APIs (such as Cocoa on macOS) for an enhanced user experience.
 
-This project aims to approximate the inner workings of the NES hardware, including the Ricoh 2A03 CPU (6502 variant) and the Ricoh 2C02 PPU (Picture Processing Unit), with a focus on running classic titles like *CENSORED*.
+This project aims to approximate the inner workings of the NES hardware, including the Ricoh 2A03 CPU (6502 variant) and the Ricoh 2C02 PPU (Picture Processing Unit), with a focus on running classic titles.
 
 <div align="center">
   <img src="docs/screenshot.png" alt="NEStupid Screenshot" width="600" />
@@ -13,8 +13,12 @@ This project aims to approximate the inner workings of the NES hardware, includi
 *   **CPU**: Complete 6502 instruction set emulation (official opcodes).
 *   **PPU**: Cycle-based rendering pipeline with background scrolling, nametable mirroring, and 8x8/8x16 sprite support.
 *   **Memory**: Standard memory map implementation including internal RAM, PPU registers, and cartridge mapping (NROM, MMC1).
+*   **Native GUI (macOS)**: 
+    *   **Native Menus**: Fully integrated system menu for standard controls.
+    *   **Open ROM Dialog**: Native file picker to load games easily.
+    *   **Key Binding Window**: Dedicated native window to remap controller buttons to any keyboard key (including modifiers like Shift/Ctrl).
 *   **Graphics**: SDL2-based framebuffer rendering.
-*   **Input**: Keyboard-mapped controller input support.
+*   **Input**: Remappable keyboard-mapped controller input.
 
 ## Prerequisites
 
@@ -49,10 +53,17 @@ This will generate the `NEStupid` executable (or `NEStupid.app` bundle on macOS)
 
 ## Usage
 
-Run the emulator by passing a valid `.nes` ROM file as an argument.
-
+### GUI Mode
+Simply run the application without arguments (or double-click the App Bundle):
 ```bash
-# From the build directory
+./NEStupid.app/Contents/MacOS/NEStupid
+```
+-   Use **File -> Open ROM...** (Cmd+O) to load a game.
+-   Use **NEStupid -> Key Bindings...** (Cmd+K) to configure controls.
+
+### Command Line Mode
+You can also launch a specific game directly:
+```bash
 ./NEStupid.app/Contents/MacOS/NEStupid ../smb.nes
 ```
 
@@ -60,15 +71,17 @@ Run the emulator by passing a valid `.nes` ROM file as an argument.
 
 ## Controls
 
-The emulator currently maps **Controller 1** to the keyboard:
+The emulator maps **Controller 1** to the keyboard. Default bindings are:
 
-| NES Button | Keyboard Key      |
+| NES Button | Default Key      |
 |------------|-------------------|
 | **A**      | `Z`               |
 | **B**      | `X`               |
 | **Start**  | `Enter` (Return)  |
-| **Select** | `Shift` (L or R)  |
+| **Select** | `Shift`           |
 | **D-Pad**  | `Arrow Keys`      |
+
+**Note:** You can remap these keys at any time using the **Key Bindings** menu option.
 
 ## Development Status
 
@@ -77,6 +90,7 @@ The emulator currently maps **Controller 1** to the keyboard:
 - [x] **Sprites**: Secondary OAM evaluation and 8-sprite limit enforcement.
 - [ ] **APU**: Audio Processing Unit (Not yet implemented).
 - [x] **Mappers**: NROM (0) and MMC1 (1) are functional. MMC3 support is planned.
+- [x] **GUI**: Native macOS integration (Menu, Open ROM, Key Config).
 
 ## License
 
