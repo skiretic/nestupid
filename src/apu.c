@@ -91,6 +91,40 @@ typedef struct {
 
 static APU_State apu;
 
+// Length Counter Table
+static const uint8_t length_table[32] = {
+    10, 254, 20, 2,  40, 4,  80, 6,  160, 8,  60, 10, 14, 12, 26, 14,
+    12, 16,  24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
+
+static void apu_write_pulse(APU_Pulse *p, uint8_t reg, uint8_t val) {
+  switch (reg) {
+  case 0:
+    p->duty = (val >> 6) & 0x03;
+    p->length_halt = (val & 0x20) != 0;
+    p->constant_volume = (val & 0x10) != 0;
+    p->volume = val & 0x0F;
+    break;
+  case 1:
+    p->sweep_enabled = (val & 0x80) != 0;
+    p->sweep_period = (val >> 4) & 0x07;
+    p->sweep_negate = (val & 0x08) != 0;
+    p->sweep_shift = val & 0x07;
+    p->sweep_reload = true;
+    break;
+  case 2:
+    p->timer_period = (p->timer_period & 0x0700) | val;
+    break;
+  case 3:
+    p->timer_period = (p->timer_period & 0x00FF) | ((val & 0x07) << 8);
+    if (p->enabled) {
+      p->length_counter = length_table[(val >> 3) & 0x1F];
+    }
+    p->envelope_start = true;
+    p->duty_pos = 0;
+    break;
+  }
+}
+
 void apu_init(void) {
   printf("APU Init\n");
   apu_reset();
@@ -104,29 +138,67 @@ void apu_reset(void) {
 
 void apu_step(void) {
   // TODO: Implement APU frame counter and channels
+  // For now, simple stepping placeholders could go here,
+  // but keeping it empty as per plan until next tasks
 }
 
 uint8_t apu_read_reg(uint16_t addr) {
   switch (addr) {
-  case 0x4015:
+  case 0x4015: {
     // Status register
-    return 0;
+    uint8_t status = 0;
+    if (apu.pulse1.length_counter > 0)
+      status |= 0x01;
+    if (apu.pulse2.length_counter > 0)
+      status |= 0x02;
+    if (apu.triangle.length_counter > 0)
+      status |= 0x04;
+    if (apu.noise.length_counter > 0)
+      status |= 0x08;
+    if (apu.dmc.bytes_remaining > 0)
+      status |= 0x10;
+    if (apu.frame_irq)
+      status |= 0x40;
+    if (apu.dmc_irq)
+      status |= 0x80;
+
+    // Reading 4015 clears frame irq
+    apu.frame_irq = false;
+    return status;
+  }
   default:
-    // printf("APU Read Unmapped: %04X\n", addr);
     return 0;
   }
 }
 
 void apu_write_reg(uint16_t addr, uint8_t val) {
   switch (addr) {
-  case 0x4000: // Pulse 1
+  case 0x4000:
+    apu_write_pulse(&apu.pulse1, 0, val);
+    break;
   case 0x4001:
+    apu_write_pulse(&apu.pulse1, 1, val);
+    break;
   case 0x4002:
+    apu_write_pulse(&apu.pulse1, 2, val);
+    break;
   case 0x4003:
-  case 0x4004: // Pulse 2
+    apu_write_pulse(&apu.pulse1, 3, val);
+    break;
+
+  case 0x4004:
+    apu_write_pulse(&apu.pulse2, 0, val);
+    break;
   case 0x4005:
+    apu_write_pulse(&apu.pulse2, 1, val);
+    break;
   case 0x4006:
+    apu_write_pulse(&apu.pulse2, 2, val);
+    break;
   case 0x4007:
+    apu_write_pulse(&apu.pulse2, 3, val);
+    break;
+
   case 0x4008: // Triangle
   case 0x400A:
   case 0x400B:
@@ -137,12 +209,37 @@ void apu_write_reg(uint16_t addr, uint8_t val) {
   case 0x4011:
   case 0x4012:
   case 0x4013:
-  case 0x4015: // Status
-  case 0x4017: // Frame Counter
-    // printf("APU Write: %04X = %02X\n", addr, val);
     break;
-  default:
-    // printf("APU Write Unmapped: %04X = %02X\n", addr, val);
+
+  case 0x4015: // Status
+    apu.pulse1.enabled = (val & 0x01) != 0;
+    if (!apu.pulse1.enabled)
+      apu.pulse1.length_counter = 0;
+
+    apu.pulse2.enabled = (val & 0x02) != 0;
+    if (!apu.pulse2.enabled)
+      apu.pulse2.length_counter = 0;
+
+    apu.triangle.enabled = (val & 0x04) != 0;
+    if (!apu.triangle.enabled)
+      apu.triangle.length_counter = 0;
+
+    apu.noise.enabled = (val & 0x08) != 0;
+    if (!apu.noise.enabled)
+      apu.noise.length_counter = 0;
+
+    apu.dmc.enabled = (val & 0x10) != 0;
+    if (!apu.dmc.enabled)
+      apu.dmc.bytes_remaining = 0;
+    else if (apu.dmc.bytes_remaining == 0) {
+      // If enabled and bytes were 0, restart only if needed (complicated,
+      // skipping for now)
+    }
+
+    apu.dmc_irq = false;
+    break;
+
+  case 0x4017: // Frame Counter
     break;
   }
 }

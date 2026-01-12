@@ -12,13 +12,33 @@ int main() {
   apu_init();
   apu_reset();
 
+  // Enable Pulse 1 (Bit 0 of 0x4015)
+  apu_write_reg(0x4015, 0x01);
+
   // Write to Pulse 1 Control (Duty, Envelope) - 0x4000
-  // Duty: 10 (50%), Loop: 1, Const: 1, Vol: 1111 (15) -> 0xBF
   apu_write_reg(0x4000, 0xBF);
 
-  // Run a single step
+  // Write Pulse 1 Timer Low
+  apu_write_reg(0x4002, 0xFD);
+
+  // Write Pulse 1 Timer High + Length Counter Load (Length index 0 -> count 10)
+  // 0x00 -> Length Counter index 0 (approx 10 ticks)
+  apu_write_reg(0x4003, 0x00);
+
+  // Run a single step (shouldn't decrement length immediately if configured
+  // right, or will decrement by 1)
   apu_step();
 
-  printf("Basic APU test passed (no crash)\n");
+  // Check Status Register 0x4015
+  // Bit 0 should be 1 (Pulse 1 length counter > 0)
+  uint8_t status = apu_read_reg(0x4015);
+  printf("Status Reg: %02X\n", status);
+
+  if ((status & 1) == 0) {
+    printf("FAIL: Pulse 1 not active in Status register\n");
+    return 1;
+  }
+
+  printf("Basic APU test passed\n");
   return 0;
 }
