@@ -1,3 +1,4 @@
+#include "apu.h"
 #include "cpu.h"
 #include "gui.h"
 #include "input.h"
@@ -6,6 +7,7 @@
 #include "ppu.h"
 #include "rom.h"
 #include <SDL2/SDL.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -61,9 +63,22 @@ int main(int argc, char *argv[]) {
   input_init();
   input_config_init();
 
-  if (!gui_init()) {
-    fprintf(stderr, "Failed to initialize GUI\n");
-    return 1;
+  bool headless = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--headless") == 0) {
+      headless = true;
+    }
+  }
+
+  if (!headless) {
+    if (!gui_init()) {
+      fprintf(stderr, "Failed to initialize GUI\n");
+      // return 1; // Don't crash if GUI fails in headless (though here we are
+      // !headless) Actually if !headless and gui fails, we should return.
+      return 1;
+    }
+  } else {
+    printf("Running in Headless Mode\n");
   }
 
   // Load ROM from CLI if provided
@@ -77,33 +92,39 @@ int main(int argc, char *argv[]) {
   mac_init_menu();
 #endif
 
-  while (gui_is_running()) {
-    // --- Input Handling ---
-    SDL_Scancode pressed = gui_poll_events();
+  // --- Main Loop ---
+  while (true) {
+    if (!headless) {
+      if (!gui_is_running())
+        break;
 
-    // --- Game Update ---
-    const uint8_t *keys = SDL_GetKeyboardState(NULL);
-    uint8_t buttons = 0;
+      // --- Input Handling ---
+      SDL_Scancode pressed = gui_poll_events();
 
-    // Map SDL Keys to NES Buttons
-    if (keys[current_keymap.key_a])
-      buttons |= BUTTON_A;
-    if (keys[current_keymap.key_b])
-      buttons |= BUTTON_B;
-    if (keys[current_keymap.key_select])
-      buttons |= BUTTON_SELECT;
-    if (keys[current_keymap.key_start])
-      buttons |= BUTTON_START;
-    if (keys[current_keymap.key_up])
-      buttons |= BUTTON_UP;
-    if (keys[current_keymap.key_down])
-      buttons |= BUTTON_DOWN;
-    if (keys[current_keymap.key_left])
-      buttons |= BUTTON_LEFT;
-    if (keys[current_keymap.key_right])
-      buttons |= BUTTON_RIGHT;
+      // --- Game Update ---
+      const uint8_t *keys = SDL_GetKeyboardState(NULL);
+      uint8_t buttons = 0;
 
-    input_update(0, buttons);
+      // Map SDL Keys to NES Buttons
+      if (keys[current_keymap.key_a])
+        buttons |= BUTTON_A;
+      if (keys[current_keymap.key_b])
+        buttons |= BUTTON_B;
+      if (keys[current_keymap.key_select])
+        buttons |= BUTTON_SELECT;
+      if (keys[current_keymap.key_start])
+        buttons |= BUTTON_START;
+      if (keys[current_keymap.key_up])
+        buttons |= BUTTON_UP;
+      if (keys[current_keymap.key_down])
+        buttons |= BUTTON_DOWN;
+      if (keys[current_keymap.key_left])
+        buttons |= BUTTON_LEFT;
+      if (keys[current_keymap.key_right])
+        buttons |= BUTTON_RIGHT;
+
+      input_update(0, buttons);
+    }
 
     // --- Emulation Step ---
     if (current_rom) {
@@ -112,32 +133,39 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < cpu_cycles * 3; i++) {
           ppu_step();
         }
+        for (int i = 0; i < cpu_cycles; i++) {
+          apu_step();
+        }
       }
       ppu_clear_frame_complete();
     }
 
-    // --- Audio Update (TODO) ---
-    // apu_update();
+    if (!headless) {
+      // --- Video Update ---
+      gui_update_framebuffer(ppu_get_framebuffer());
 
-    // --- Video Update ---
-    // Render Game
-    gui_update_framebuffer(ppu_get_framebuffer());
+      // Final Present
+      gui_render_present();
 
-    // --- Video Update ---
-    gui_update_framebuffer(ppu_get_framebuffer());
+      // --- Timing (Simple Cap at 60 FPS) ---
+      static uint64_t last_time = 0;
+      uint64_t current_time = SDL_GetTicks64();
+      uint64_t elapsed = current_time - last_time;
+      if (elapsed < 16) {
+        SDL_Delay(16 - elapsed);
+      }
+      last_time = SDL_GetTicks64();
+    } else {
+      // Headless timing (uncapped or simple delay to prevent 100% CPU usage
+      // loop if rom not loaded - though rom should be loaded) If ROM is loaded,
+      // we just loop as fast as possible for tests? Actually blargg tests might
+      // take a few seconds. Let's just yield a tiny bit or let it burn. If we
+      // want to exit automatically, we need a condition. For now, let user kill
+      // it or rely on timeout.
 
-    // Final Present
-    gui_render_present();
-
-    // --- Timing (Simple Cap at 60 FPS) ---
-    // 60 FPS = 16.67ms per frame
-    static uint64_t last_time = 0;
-    uint64_t current_time = SDL_GetTicks64();
-    uint64_t elapsed = current_time - last_time;
-    if (elapsed < 16) {
-      SDL_Delay(16 - elapsed);
+      // We can add a "frame limit" for headless or just let it run.
+      // For debugging, faster is better.
     }
-    last_time = SDL_GetTicks64();
   }
 
   gui_cleanup();

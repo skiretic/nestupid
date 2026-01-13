@@ -60,3 +60,16 @@ Driven by APU Cycle (CPU/2).
 - Step 3: Envelope, Linear
 - Step 4: -
 - Step 5: Envelope, Linear, Length, Sweep
+
+## Implementation Details
+
+### Mixer & Filters
+The emulator implements a **first-order High-Pass Filter (HPF)** to mimic the NES output path and remove DC offset.
+- **Algorithm:** `y[i] = alpha * (y[i-1] + x[i] - x[i-1])` with `alpha = 0.996`.
+- This prevents audio "popping" during silence or buffer underruns.
+
+### Audio Buffering
+- **Ring Buffer:** A lock-free, index-based ring buffer (`buffer_write_pos`, `buffer_read_pos`) is used to safely transfer samples from the emulation thread to the SDL audio callback thread.
+- **Synchronization:** The emulator generates samples based on a floating-point accumulator to match the target sample rate (44.1kHz) accurately, handling the ratio between CPU cycles and audio samples (`~40.58` cycles/sample).
+- **Thread Safety:** Indices are marked `volatile` to ensure atomic visibility.
+

@@ -11,6 +11,12 @@ The script:
 3. Steps the emulator.
 4. Inspects memory/registers to verify state.
 
+## Headless Mode verifiable
+To facilitate automated testing without requiring a display or audio, NEStupid supports a `--headless` flag. This bypasses SDL2 initialization and GUI loops, allowing tests to run in CI/environment without windowing support.
+```bash
+./NEStupid ../test.nes --headless
+```
+
 ## Test ROMs & Mapping
 
 All ROMs must be loaded from `tests/roms/nes-test-roms/`.

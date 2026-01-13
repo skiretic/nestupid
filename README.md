@@ -12,14 +12,14 @@ This project aims to approximate the inner workings of the NES hardware, includi
 
 *   **CPU**: Complete 6502 instruction set emulation (official opcodes).
 *   **PPU**: Cycle-based rendering pipeline with background scrolling, nametable mirroring, and 8x8/8x16 sprite support.
-*   **Memory**: Standard memory map implementation including internal RAM, PPU registers, and cartridge mapping (NROM, MMC1).
+*   **Memory**: Standard memory map implementation including internal RAM, PPU registers, and cartridge mapping (NROM, MMC1, UxROM, MMC3).
 *   **Native GUI (macOS)**: 
     *   **Native Menus**: Fully integrated system menu for standard controls.
     *   **Open ROM Dialog**: Native file picker to load games easily.
     *   **Key Binding Window**: Dedicated native window to remap controller buttons to any keyboard key (including modifiers like Shift/Ctrl).
 *   **Graphics**: SDL2-based framebuffer rendering.
 *   **Input**: Remappable keyboard-mapped controller input.
-*   **APU Core**: Foundational 2A03 audio processing logic (Pulse, Triangle, Noise, Frame Counter). *Audio output mixing and SDL integration are currently in development.*
+*   **APU**: Full 2A03 audio processing logic (Pulse, Triangle, Noise, DMC) with mixed audio output provided via SDL2.
 
 ## Prerequisites
 
@@ -68,7 +68,13 @@ You can also launch a specific game directly:
 ./NEStupid.app/Contents/MacOS/NEStupid ../smb.nes
 ```
 
-*Note: The emulator currently supports **NROM** (0) and **MMC1** (1) mapper games (e.g., Super Mario Bros, The Legend of Zelda). Advanced mappers (MMC3) are in development.*
+### Headless Mode (Testing)
+Run without GUI/Audio/Video (useful for automated tests or CI):
+```bash
+./NEStupid.app/Contents/MacOS/NEStupid ../test.nes --headless
+```
+
+*Note: The emulator currently supports **NROM (0)**, **MMC1 (1)**, **UxROM (2)**, and **MMC3 (4)** games (e.g., Super Mario Bros, Zelda, Contra, SMB3).*
 
 ## Controls
 
@@ -89,8 +95,8 @@ The emulator maps **Controller 1** to the keyboard. Default bindings are:
 - [x] **CPU**: Cycle-accurate instruction execution.
 - [x] **PPU**: Background fetching, scrolling, and Sprite 0 Hit detection.
 - [x] **Sprites**: Secondary OAM evaluation and 8-sprite limit enforcement.
-- [/] **APU**: Foundational 2A03 audio logic (Pulse, Triangle, Noise channels) implemented. Mixer and SDL integration in progress.
-- [x] **Mappers**: NROM (0) and MMC1 (1) are functional. MMC3 support is planned.
+- [x] **APU**: Complete 2A03 audio support (Pulse, Triangle, Noise, DMC) including mixer and SDL output.
+- [x] **Mappers**: NROM (0), MMC1 (1), UxROM (2), and MMC3 (4) are functional.
 - [x] **GUI**: Native macOS integration (Menu, Open ROM, Key Config).
 
 ## License

@@ -38,13 +38,13 @@
 ## Phase 5: Mappers & Compatibility
 - [x] Implement Mapper Interface (virtual functions).
 - [x] Implement Mapper 1 (MMC1) - *Zelda, Metroid*.
-- [ ] Implement Mapper 2 (UxROM) - *Contra*.
+- [x] Implement Mapper 2 (UxROM) - *Contra*.
 - [ ] Implement Mapper 3 (CNROM).
-- [ ] Implement Mapper 4 (MMC3) - *SMB3, Kirby*.
+- [x] Implement Mapper 4 (MMC3) - *SMB3, Kirby*.
 
 ## Phase 6: Audio (APU)
-- [ ] Pulse Channels 1 & 2.
-- [ ] Triangle Channel.
-- [ ] Noise Channel.
-- [ ] DMC Channel.
-- [ ] Review Mixer & SDL Audio Callback.
+- [x] Pulse Channels 1 & 2.
+- [x] Triangle Channel.
+- [x] Noise Channel.
+- [x] DMC Channel.
+- [x] Review Mixer & SDL Audio Callback.

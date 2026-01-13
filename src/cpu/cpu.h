@@ -50,4 +50,8 @@ void cpu_stall(int cycles);
 // Signal NMI
 void cpu_nmi(void);
 
+// Signal IRQ (Level Sensitive)
+void cpu_irq(void);
+void cpu_clear_irq(void);
+
 #endif // CPU_H

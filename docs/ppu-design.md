@@ -68,6 +68,10 @@ Reading this register resets the Write Latch (w).
 3. **Post-Render (240)**: Idle.
 4. **VBlank (241-260)**: Set VBlank Flag at dot 1 of line 241.
 
+## Clipping
+- The PPU supports hiding the leftmost 8 pixels of the screen (columns 0-7) via `PPUMASK` bits 1 (background) and 2 (sprites).
+- This is commonly used by scrolling games (like SMB3) to hide update artifacts at the screen edge.
+
 ## OAM Layout (4 Bytes per Sprite)
 1. **Y**: Y Position - 1.
 2. **T**: Tile Index.

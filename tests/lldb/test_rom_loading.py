@@ -9,18 +9,24 @@ def test_rom_loading(debugger, command, result, internal_dict):
     thread = process.GetSelectedThread()
     frame = thread.GetSelectedFrame()
 
-    # Verify ROM pointer
-    rom_ptr = frame.FindVariable("rom")
+    # Verify ROM pointer (current_rom is static global in main.c)
+    # Since we are likely in a different frame (cpu_reset), we look at target globals
+    rom_ptr = target.FindFirstGlobalVariable("current_rom")
+    
     if not rom_ptr.IsValid():
-        # Try parent frame (main)
-        parent = thread.GetFrameAtIndex(1)
-        if parent.IsValid():
-            rom_ptr = parent.FindVariable("rom")
+        # Fallback: Try looking in frame/parent just in case setup changes
+        rom_ptr = frame.FindVariable("current_rom")
+        if not rom_ptr.IsValid():
+             parent = thread.GetFrameAtIndex(1)
+             if parent.IsValid():
+                 rom_ptr = parent.FindVariable("current_rom")
 
     if not rom_ptr.IsValid():
-        print("WARNING: 'rom' variable not found in current or parent frame. Skipping pointer check.")
+        print("WARNING: 'current_rom' variable not found via target or frames.")
+        # We might be strictly in a scope where debug info for main.c isn't linked? 
+        # But usually globals works.
     elif rom_ptr.GetValueAsUnsigned() == 0:
-        print("FAILURE: 'rom' is NULL")
+        print("FAILURE: 'current_rom' is NULL")
         return
     else:    
         print(f"SUCCESS: ROM pointer valid: {rom_ptr.GetValue()}")

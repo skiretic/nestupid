@@ -1,4 +1,5 @@
 #include "gui.h"
+#include "apu.h"
 #include "ppu.h"
 #include <SDL2/SDL.h>
 #include <stdio.h>
@@ -43,6 +44,24 @@ bool gui_init(void) {
   if (!texture) {
     printf("Texture creation failed: %s\n", SDL_GetError());
     return false;
+  }
+
+  // Audio Init
+  SDL_AudioSpec want, have;
+  SDL_memset(&want, 0, sizeof(want));
+  want.freq = 44100;
+  want.format = AUDIO_F32;
+  want.channels = 1;
+  want.samples = 2048;
+  want.callback = (SDL_AudioCallback)apu_fill_buffer;
+
+  if (SDL_OpenAudio(&want, &have) < 0) {
+    printf("Failed to open audio: %s\n", SDL_GetError());
+  } else {
+    if (have.format != want.format) {
+      printf("We didn't get Float32 audio format.\n");
+    }
+    SDL_PauseAudio(0); // Start playing
   }
 
   running = true;

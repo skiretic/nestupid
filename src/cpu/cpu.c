@@ -51,6 +51,10 @@ void cpu_nmi(void) {
   printf("\n");
 }
 
+void cpu_irq(void) { cpu.irq_pending = true; }
+
+void cpu_clear_irq(void) { cpu.irq_pending = false; }
+
 const CPU_State *cpu_get_state(void) { return &cpu; }
 
 // --- Addressing Modes ---
@@ -454,7 +458,7 @@ static void op_jmp(uint16_t addr) { cpu.pc = addr; }
 
 static void op_jsr(uint16_t addr) {
   push16(cpu.pc - 1);
-  printf("JSR to %04X\n", addr);
+  // printf("JSR to %04X\n", addr);
   cpu.pc = addr;
 }
 
@@ -559,6 +563,24 @@ uint8_t cpu_step(void) {
     printf("NMI Vector: %04X\n", cpu.pc);
     cpu.cycles_wait = 7;
     return 1; // Start executing interrupt (cycles waited in subsequent calls)
+  }
+
+  // Handle IRQ
+  if (cpu.irq_pending && !(cpu.p & FLAG_I)) {
+    printf("CPU Entering IRQ Handler!\n");
+    // IRQ is level sensitive, but we just trigger once per pending flag for now
+    // The caller (mapper) should keep asserting if needed, or we check it every
+    // step. Ideally, irq_pending stays true as long as line is held low. But
+    // for simplicity, we treat the flag as the current line state.
+
+    push16(cpu.pc);
+    push(cpu.p | FLAG_U); // B flag clear
+    cpu.p |= FLAG_I;
+    uint8_t lo = cpu_read(0xFFFE);
+    uint8_t hi = cpu_read(0xFFFF);
+    cpu.pc = (hi << 8) | lo;
+    cpu.cycles_wait = 7;
+    return 1;
   }
 
   // Trace
@@ -1135,6 +1157,7 @@ uint8_t cpu_step(void) {
     op_rol_m(addr_abs());
     cpu.cycles_wait = 6;
     break;
+  case 0x3E:
     op_rol_m(addr_absx());
     cpu.cycles_wait = 7;
     break;

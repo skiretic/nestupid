@@ -101,6 +101,18 @@ void cpu_write(uint16_t addr, uint8_t val) {
   }
 
   // Cartridge Space - Writes to ROM/RAM/Registers handled by Mapper
+  if (addr == 0x6000) {
+    // Debug output for Blargg's tests
+    // Keep track if it's a text string or result code?
+    // Blargg's tests write text to $6000.
+    // Usually zero-terminated strings char by char.
+    if (val != 0) {
+      printf("[$6000 Write: %02X '%c']\n", val, val);
+      // printf("%c", val);
+      fflush(stdout);
+    }
+  }
+
   if (addr >= 0x4020) {
     mapper_cpu_write(addr, val);
   }

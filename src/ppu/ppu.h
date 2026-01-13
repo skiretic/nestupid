@@ -114,5 +114,7 @@ const uint8_t *ppu_get_framebuffer(void);
 const uint8_t *ppu_get_palette(void);
 bool ppu_is_frame_complete(void);
 void ppu_clear_frame_complete(void);
+// Debug Access
+int ppu_get_scanline(void);
 
 #endif // PPU_H

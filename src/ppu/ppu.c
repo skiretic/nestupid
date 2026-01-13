@@ -69,6 +69,8 @@ static uint16_t ppu_mirror_nametable_addr(uint16_t addr) {
 static uint8_t ppu_vram_read(uint16_t addr) {
   addr &= 0x3FFF;
 
+  mapper_ppu_tick(addr); // Snooping
+
   if (addr < 0x2000) {
     return mapper_ppu_read(addr);
   }
@@ -94,6 +96,9 @@ static uint8_t ppu_vram_read(uint16_t addr) {
 
 static void ppu_vram_write(uint16_t addr, uint8_t val) {
   addr &= 0x3FFF;
+
+  mapper_ppu_tick(addr); // Snooping
+
   if (addr < 0x2000) {
     mapper_ppu_write(addr, val);
   } else if (addr < 0x3F00) {
@@ -144,8 +149,9 @@ void ppu_write_reg(uint16_t addr, uint8_t val) {
     ppu.t = (ppu.t & 0xF3FF) | ((val & 0x03) << 10);
     break;
   case 1: // PPUMASK
-    printf("PPUMASK Write: %02X (BG:%d SPR:%d)\n", val,
-           (val & PPU_MASK_SHOW_BG) ? 1 : 0, (val & PPU_MASK_SHOW_SPR) ? 1 : 0);
+    // printf("PPUMASK Write: %02X (BG:%d SPR:%d)\n", val,
+    //        (val & PPU_MASK_SHOW_BG) ? 1 : 0, (val & PPU_MASK_SHOW_SPR) ? 1 :
+    //        0);
     ppu.mask = val;
     break;
   case 3: // OAMADDR
@@ -314,15 +320,19 @@ void ppu_step(void) {
       uint16_t sprite_pattern_table =
           (ppu.ctrl & PPU_CTRL_SPR_PT) ? 0x1000 : 0x0000;
 
-      for (int i = 0; i < ppu.sprite_count; i++) {
+      for (int i = 0; i < 8; i++) {
         uint8_t y = ppu.secondary_oam[i * 4 + 0];
         uint8_t tile = ppu.secondary_oam[i * 4 + 1];
         uint8_t attr = ppu.secondary_oam[i * 4 + 2];
         uint8_t x = ppu.secondary_oam[i * 4 + 3];
 
-        // Initialize counters/latches
-        ppu.sprite_x_counter[i] = x;
-        ppu.sprite_attrib[i] = attr;
+        // Only process valid sprites for shifters, but ALWAYS fetch
+        bool valid_sprite = (i < ppu.sprite_count);
+
+        if (valid_sprite) {
+          ppu.sprite_x_counter[i] = x;
+          ppu.sprite_attrib[i] = attr;
+        }
 
         // Calculate Pattern Address
         uint16_t addr_lo = 0, addr_hi = 0;
@@ -350,12 +360,12 @@ void ppu_step(void) {
           addr_hi = addr_lo + 8;
         }
 
-        // Read Pattern Data
+        // Read Pattern Data (This drives MMC3 IRQ!)
         uint8_t pat_lo = ppu_vram_read(addr_lo);
         uint8_t pat_hi = ppu_vram_read(addr_hi);
 
         // Horizontal Flip Logic (Flip X)
-        if (attr & 0x40) {
+        if (attr & 0x40 && valid_sprite) {
           // Reverse bits
           uint8_t r_lo = 0, r_hi = 0;
           for (int b = 0; b < 8; b++) {
@@ -368,8 +378,10 @@ void ppu_step(void) {
           pat_hi = r_hi;
         }
 
-        ppu.sprite_shifter_pattern_lo[i] = pat_lo;
-        ppu.sprite_shifter_pattern_hi[i] = pat_hi;
+        if (valid_sprite) {
+          ppu.sprite_shifter_pattern_lo[i] = pat_lo;
+          ppu.sprite_shifter_pattern_hi[i] = pat_hi;
+        }
       }
 
       // Latch sprite count for next line rendering
@@ -443,8 +455,8 @@ void ppu_step(void) {
     if (ppu.dot == 0 && ppu.scanline < 240) {
       static int frame_log_count = 0;
       if (frame_log_count < 2) { // Log first 2 frames only
-        printf("SL:%d v:%04X t:%04X x:%d\n", ppu.scanline, ppu.v, ppu.t,
-               ppu.fine_x);
+        // printf("SL:%d v:%04X t:%04X x:%d\n", ppu.scanline, ppu.v, ppu.t,
+        //        ppu.fine_x);
       }
     }
 
@@ -496,6 +508,15 @@ void ppu_step(void) {
           uint8_t pal0 = (ppu.bg_shifter_attrib_lo & bit_mux) ? 1 : 0;
           uint8_t pal1 = (ppu.bg_shifter_attrib_hi & bit_mux) ? 1 : 0;
           palette = (pal1 << 1) | pal0; // 0-3
+
+          // Left Clipping (BG)
+          if ((ppu.mask & PPU_MASK_SHOW_BG_LEFT) == 0) {
+            if (ppu.dot <= 8) {
+              pixel = 0;
+              palette = 0;
+            }
+          }
+
           // --- Sprite Pixel Logic ---
           uint8_t sprite_pixel = 0;
           uint8_t sprite_palette = 0;
@@ -521,22 +542,32 @@ void ppu_step(void) {
                 uint8_t sp_pix = (pixel_hi << 1) | pixel_lo;
 
                 if (sp_pix != 0) {
-                  if (sprite_pixel == 0) { // First non-transparent sprite wins
-                    sprite_pixel = sp_pix;
-                    sprite_palette = (ppu.sprite_attrib[i] & 0x03) +
-                                     4; // Sprites use palette 4-7
-                    sprite_priority =
-                        (ppu.sprite_attrib[i] & 0x20) ? true : false;
+                  // Left Clipping (Sprite)
+                  if ((ppu.mask & PPU_MASK_SHOW_SPR_LEFT) == 0) {
+                    if (ppu.dot <= 8) {
+                      sp_pix = 0;
+                    }
+                  }
 
-                    // Sprite 0 Hit
-                    if (i == 0 && ppu.render_sprite_zero_possible) {
-                      if (pixel != 0 && sp_pix != 0) {
-                        // Require BG pixel to be opaque too
-                        if (ppu.dot !=
-                            255) { // Clip right edge? Reference docs.
-                          ppu.status |= PPU_STATUS_SPR0_HIT; // Set flag
-                          ppu.sprite_zero_being_rendered =
-                              true; // Mark potential hit
+                  if (sp_pix != 0) {
+                    if (sprite_pixel ==
+                        0) { // First non-transparent sprite wins
+                      sprite_pixel = sp_pix;
+                      sprite_palette = (ppu.sprite_attrib[i] & 0x03) + 4;
+                      sprite_priority =
+                          (ppu.sprite_attrib[i] & 0x20) ? true : false;
+
+                      // Sprite 0 Hit
+                      if (i == 0 && ppu.render_sprite_zero_possible) {
+                        if (pixel != 0 && sp_pix != 0) {
+                          // Require BG pixel to be opaque too
+                          // Hit not possible if clipped? Already handled by
+                          // setting 0.
+                          if (ppu.dot != 255) {
+                            ppu.status |= PPU_STATUS_SPR0_HIT; // Set flag
+                            ppu.sprite_zero_being_rendered =
+                                true; // Mark potential hit
+                          }
                         }
                       }
                     }
@@ -628,3 +659,5 @@ const uint8_t *ppu_get_palette(void) { return ppu.palette; }
 bool ppu_is_frame_complete(void) { return ppu.frame_complete; }
 
 void ppu_clear_frame_complete(void) { ppu.frame_complete = false; }
+
+int ppu_get_scanline(void) { return ppu.scanline; }

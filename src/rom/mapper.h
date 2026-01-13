@@ -19,4 +19,7 @@ void mapper_ppu_write(uint16_t addr, uint8_t val);
 // Returns: MIRRORING_HORIZONTAL, MIRRORING_VERTICAL, or others
 uint8_t mapper_get_mirroring(void);
 
+// Snoop PPU bus address for IRQ counters (MMC3)
+void mapper_ppu_tick(uint16_t addr);
+
 #endif // MAPPER_H

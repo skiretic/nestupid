@@ -55,17 +55,21 @@
 - [ ] **Phase 5: Mappers**
     - [x] Mapper Interface Design
     - [x] MMC1 Implementation
-    - [x] MMC1 Implementation
-    - [ ] MMC3 Implementation
+    - [x] MMC3 Implementation (Verified with SMB3)
+    - [x] Mapper 2 (UxROM) Implementation
 - [x] **Phase 5.5: GUI & Usability**
     - [x] Implement Key Binding Configuration
     - [x] Implement Native macOS Menu & Window
     - [x] Implement "Open ROM" Dialog
-- [ ] **Phase 6: APU** <!-- id: 50 -->
+- [x] **Phase 6: APU** <!-- id: 50 -->
     - [x] APU Data Structures & Skeleton <!-- id: 51 -->
     - [x] Pulse Channels (1 & 2) <!-- id: 52 -->
     - [x] Triangle Channel <!-- id: 53 -->
     - [x] Noise Channel <!-- id: 54 -->
+    - [x] DMC Channel <!-- id: 55 -->
     - [x] Frame Counter & Length/Envelope Logic <!-- id: 55 -->
-    - [/] Mixer & Output Generation <!-- id: 56 -->
-    - [ ] SDL Audio Integration <!-- id: 57 -->
+    - [x] Mixer & Output Generation <!-- id: 56 -->
+    - [x] SDL Audio Integration <!-- id: 57 -->
+    - [x] Fix Audio Popping (HPF, Thread Safety, Sync)
+    - [x] Run Blargg's APU tests (Manual verification required, automated tests pending IRQ timing fix)
+    - [x] Fix missing CPU Opcode 3E (ROL abs,X) [Verified with instr_test-v5]

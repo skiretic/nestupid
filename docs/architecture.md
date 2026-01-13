@@ -66,3 +66,5 @@ Mappers are implemented using a unified interface (`mapper.h`) that intercepts C
 Supported Mappers:
 - **Mapper 0 (NROM)**: Standard 16KB/32KB PRG, 8KB CHR.
 - **Mapper 1 (MMC1)**: Shift-register based banking, dynamic mirroring. (Used by *Zelda*, *Metroid*)
+- **Mapper 2 (UxROM)**: PRG banking only. (Used by *Contra*, *Castlevania*)
+- **Mapper 4 (MMC3)**: PRG/CHR banking, IRQ support. (Used by *SMB3*, *Kirby*)
