@@ -36,8 +36,11 @@
     - [x] Implement `src/cpu/cpu.h` (State, Flags) <!-- id: 35 -->
     - [x] Implement Addressing Modes <!-- id: 36 -->
     - [x] Implement Official Opcodes <!-- id: 37 -->
+    - [x] Implement Illegal Opcodes (NOPs, RMWs, LAX/SAX, Misc) [Verified with instr_test-v5]
     - [x] Implement `cpu_step` / Interrupts <!-- id: 38 -->
     - [x] Verify with `nestest.nes` <!-- id: 39 -->
+    - [x] Fix missing CPU Opcode 3E (ROL abs,X) [Verified with instr_test-v5]
+    - [x] Fix Illegal Opcode Handling [Verified with instr_test-v5]
 - [x] Phase 3: PPU <!-- id: 15 -->
     - [x] Implement `src/ppu/ppu.h` & VRAM Map <!-- id: 40 -->
     - [x] Implement Registers ($2000-$2007) <!-- id: 41 -->
@@ -49,6 +52,7 @@
     - [x] Implement Sprite Fetching & Shifters <!-- id: 47 -->
     - [x] Implement Sprite Rendering & Priority <!-- id: 48 -->
     - [x] Verify Sprites (Visual/LLDB) <!-- id: 49 -->
+    - [ ] **Fix PPU Sprite Hit Tests** (All 11 tests currently failing)
 - [x] **Phase 4: Input - Implement Controller Support**
     - [x] Standard Controller (Read/Strobe)
     - [x] Input SDL Integration
@@ -57,6 +61,10 @@
     - [x] MMC1 Implementation
     - [x] MMC3 Implementation (Verified with SMB3)
     - [x] Mapper 2 (UxROM) Implementation
+- [x] Mapper 3 (CNROM) Implementation
+- [x] Automated Testing: `scripts/test_public_roms.sh` (Covers CPU, MMC1, MMC3, Sprite Hit)
+    - [x] **Fix MMC1 Tests** (Verified `Legend of Zelda` runs; `mmc1_a12` requires cycle-exact PPU)
+    - [ ] **Fix MMC3 Tests** (Core & IRQ failing)
 - [x] **Phase 5.5: GUI & Usability**
     - [x] Implement Key Binding Configuration
     - [x] Implement Native macOS Menu & Window
@@ -72,4 +80,3 @@
     - [x] SDL Audio Integration <!-- id: 57 -->
     - [x] Fix Audio Popping (HPF, Thread Safety, Sync)
     - [x] Run Blargg's APU tests (Manual verification required, automated tests pending IRQ timing fix)
-    - [x] Fix missing CPU Opcode 3E (ROL abs,X) [Verified with instr_test-v5]

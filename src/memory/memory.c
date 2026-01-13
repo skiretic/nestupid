@@ -18,7 +18,7 @@ void memory_init(ROM *rom) {
   printf("Memory System Initialized\n");
 }
 
-uint8_t cpu_read(uint16_t addr) {
+uint8_t bus_read(uint16_t addr) {
   // $0000 - $1FFF: 2KB Internal RAM (mirrored 4 times)
   if (addr < 0x2000) {
     return internal_ram[addr & 0x07FF];
@@ -53,7 +53,7 @@ uint8_t cpu_read(uint16_t addr) {
   return mapper_cpu_read(addr);
 }
 
-void cpu_write(uint16_t addr, uint8_t val) {
+void bus_write(uint16_t addr, uint8_t val) {
   // $0000 - $1FFF: 2KB Internal RAM (mirrored)
   if (addr < 0x2000) {
     internal_ram[addr & 0x07FF] = val;
@@ -73,7 +73,7 @@ void cpu_write(uint16_t addr, uint8_t val) {
     uint16_t src_base = val << 8;
     uint8_t buffer[256];
     for (int i = 0; i < 256; i++) {
-      buffer[i] = cpu_read(src_base + i);
+      buffer[i] = bus_read(src_base + i);
     }
     ppu_dma(buffer);
     printf("OAM DMA Triggered! Page: %02X\n", val);
@@ -103,12 +103,24 @@ void cpu_write(uint16_t addr, uint8_t val) {
   // Cartridge Space - Writes to ROM/RAM/Registers handled by Mapper
   if (addr == 0x6000) {
     // Debug output for Blargg's tests
-    // Keep track if it's a text string or result code?
-    // Blargg's tests write text to $6000.
-    // Usually zero-terminated strings char by char.
-    if (val != 0) {
-      printf("[$6000 Write: %02X '%c']\n", val, val);
-      // printf("%c", val);
+    if ((val >= 0x20 && val <= 0x7E) || val == '\n' || val == '\r' ||
+        val == '\t') {
+      printf("%c", val);      // Print ASCII char directly
+    } else if (val != 0x80) { // Skip "Running" heartbeat to avoid clutter
+      printf("\n[$6000 Status: %02X]\n", val);
+    }
+    fflush(stdout);
+  }
+
+  // $6004+: Text output from Blargg's tests
+  if (addr >= 0x6004 && addr < 0x7000) {
+    if ((val >= 0x20 && val <= 0x7E) || val == '\n' || val == '\r' ||
+        val == '\t') {
+      printf("%c", val);
+      fflush(stdout);
+    } else if (val == 0) {
+      // Null terminator - end of text
+      printf("\n");
       fflush(stdout);
     }
   }

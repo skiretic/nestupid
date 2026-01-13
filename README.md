@@ -74,7 +74,7 @@ Run without GUI/Audio/Video (useful for automated tests or CI):
 ./NEStupid.app/Contents/MacOS/NEStupid ../test.nes --headless
 ```
 
-*Note: The emulator currently supports **NROM (0)**, **MMC1 (1)**, **UxROM (2)**, and **MMC3 (4)** games (e.g., Super Mario Bros, Zelda, Contra, SMB3).*
+*Note: The emulator currently supports **NROM (0)**, **MMC1 (1)**, **UxROM (2)**, **CNROM (3)** and **MMC3 (4)** games (e.g., Super Mario Bros, Zelda, Contra, SMB3).*
 
 ## Controls
 
@@ -96,10 +96,10 @@ The emulator maps **Controller 1** to the keyboard. Default bindings are:
 - [x] **PPU**: Background fetching, scrolling, and Sprite 0 Hit detection.
 - [x] **Sprites**: Secondary OAM evaluation and 8-sprite limit enforcement.
 - [x] **APU**: Complete 2A03 audio support (Pulse, Triangle, Noise, DMC) including mixer and SDL output.
-- [x] **Mappers**: NROM (0), MMC1 (1), UxROM (2), and MMC3 (4) are functional.
-- [ ] **Mappers (Planned)**: CNROM (3).
+- [x] **Mappers**: NROM (0), MMC1 (1), UxROM (2), CNROM (3), and MMC3 (4) are functional.
+- [ ] **Mappers (Planned)**: AOROM (7), MMC2 (9).
 - [x] **GUI**: Native macOS integration (Menu, Open ROM, Key Config).
-- [ ] **Refinement**: PPU timing accuracy, APU audio popping/sync fixes.
+- [ ] **Refinement**: MMC3 IRQ timing accuracy, PPU Sprite rendering timing.
 
 ## Roadmap
 

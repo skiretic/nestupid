@@ -1,3 +1,4 @@
+#include "../system.h"
 #include "apu.h"
 #include "cpu.h"
 #include "gui.h"
@@ -29,6 +30,14 @@ void init_logging(void) {
     fprintf(log_file, "NEStupid Starting...\n");
     fclose(log_file);
   }
+}
+
+// System Step: Advances PPU (3 ticks) and APU (1 tick)
+void system_step(void) {
+  ppu_step();
+  ppu_step();
+  ppu_step();
+  apu_step();
 }
 
 static ROM *current_rom = NULL;
@@ -129,12 +138,16 @@ int main(int argc, char *argv[]) {
     // --- Emulation Step ---
     if (current_rom) {
       while (!ppu_is_frame_complete()) {
-        uint8_t cpu_cycles = cpu_step();
-        for (int i = 0; i < cpu_cycles * 3; i++) {
-          ppu_step();
-        }
-        for (int i = 0; i < cpu_cycles; i++) {
-          apu_step();
+        cpu_step();
+
+        // Execution logging
+        static uint32_t total_cycles = 0;
+        total_cycles++;
+        if (total_cycles > 1000000) {
+          const CPU_State *s = cpu_get_state();
+          printf("Running... PC:%04X Cycles:%llu\n", s->pc, s->total_cycles);
+          fflush(stdout);
+          total_cycles = 0;
         }
       }
       ppu_clear_frame_complete();
@@ -156,15 +169,19 @@ int main(int argc, char *argv[]) {
       }
       last_time = SDL_GetTicks64();
     } else {
-      // Headless timing (uncapped or simple delay to prevent 100% CPU usage
-      // loop if rom not loaded - though rom should be loaded) If ROM is loaded,
-      // we just loop as fast as possible for tests? Actually blargg tests might
-      // take a few seconds. Let's just yield a tiny bit or let it burn. If we
-      // want to exit automatically, we need a condition. For now, let user kill
-      // it or rely on timeout.
+      // Headless progress logging
+      static uint32_t total_cycles = 0;
+      static uint32_t last_log_cycles = 0;
+      // We need to track cycles from the emulation loop
 
-      // We can add a "frame limit" for headless or just let it run.
-      // For debugging, faster is better.
+      // Auto-exit after ~600 frames (approx 10 seconds of emulated time) to
+      // prevent hanging
+      static int frame_count = 0;
+      frame_count++;
+      if (frame_count > 600) {
+        printf("Headless Mode Timeout (600 frames)\n");
+        break;
+      }
     }
   }
 

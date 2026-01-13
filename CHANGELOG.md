@@ -2,7 +2,18 @@
 
 All notable changes to **NEStupid** will be documented in this file.
 
-## [Unreleased] - 2026-01-12
+## [Unreleased] - 2026-01-13
+
+### Added (CPU & Testing)
+- **Illegal Opcode Support**: Implemented all stable undocumented 6502 instructions (NOPs, LAX, SAX, RMWs), achieving 100% pass rate on `instr_test-v5`.
+- **Automated Mapper Testing**: Expanded `test_public_roms.sh` to include test suites for MMC1 and MMC3.
+- **PPU State Accessors**: Exposed `ppu_get_state()` to allow mappers to inspect internal PPU state (required for advanced banking logic).
+
+### Fixed (Mappers)
+- **MMC1 SNROM Logic**: Implemented PPU A12-based WRAM disabling (CHR A16 wiring simulation), verified with *The Legend of Zelda*.
+- **MMC1 WRAM Control**: Fixed PRG Bank bit 4 logic for enabling/disabling WRAM.
+
+## [0.1.0] - 2026-01-12
 
 ### Added
 - **Native macOS GUI**: Replaced custom overlay with native Cocoa UI elements.

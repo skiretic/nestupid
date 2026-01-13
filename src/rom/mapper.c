@@ -1,4 +1,5 @@
 #include "mapper.h"
+#include "../ppu/ppu.h"
 #include "cpu.h"
 #include <stdio.h>
 #include <string.h>
@@ -40,6 +41,9 @@ static MMC3_State mmc3;
 
 // --- Mapper 2 (UxROM) State ---
 static uint8_t uxrom_prg_bank = 0;
+
+// --- Mapper 3 (CNROM) State ---
+static uint8_t cnrom_chr_bank = 0;
 
 // --- Mapper 0 (NROM) Logic ---
 
@@ -160,9 +164,63 @@ static uint32_t mmc1_get_prg_addr(uint16_t addr) {
   }
 }
 
+// extern PPU_State ppu; // Removed
+
+static bool mmc1_is_wram_disabled(void) {
+  // 1. Standard PRG Bank Bit 4 Disable
+  if (mmc1.prg_bank & 0x10)
+    return true;
+
+  // 2. SNROM CHR A16 Disable (Wiring: CHR A16 -> WRAM /CE)
+  const PPU_State *ppu = ppu_get_state();
+
+  bool rendering = (ppu->mask & 0x18);
+  bool a12 = false;
+
+  if (rendering) {
+    if (ppu->dot >= 257 && ppu->dot <= 320) {
+      // Sprite fetch time
+      if (ppu->ctrl & 0x08)
+        a12 = true; // Sprite Table $1000
+    } else if (ppu->dot >= 1 && ppu->dot <= 256) {
+      // BG fetch time
+      if (ppu->ctrl & 0x10)
+        a12 = true; // BG Table $1000
+    }
+  } else {
+    // Idle
+    if ((ppu->v & 0x1000))
+      a12 = true;
+  }
+
+  // MMC1 4KB Mode: Bank determined by A12
+  uint8_t chr_mode = (mmc1.control >> 4) & 1;
+  uint8_t selected_bank = mmc1.chr_bank0;
+
+  if (chr_mode == 1) { // 4KB
+    if (a12)
+      selected_bank = mmc1.chr_bank1;
+    else
+      selected_bank = mmc1.chr_bank0;
+  }
+  // In 8KB mode, bank0 is used (and A12 is low-order address bit inside bank),
+  // but CHR A16 is effectively Bit 4 of Bank0?
+  // Yes, 8KB mode: Banks are 8KB aligned (bit 0 ignored). Bank index bits 1-4.
+  // So selected_bank = bank0.
+
+  // Check Bit 4 (CHR A16)
+  if (selected_bank & 0x10)
+    return true;
+
+  return false;
+}
+
 static uint8_t mmc1_cpu_read(uint16_t addr) {
   if (addr >= 0x6000 && addr < 0x8000) {
-    return prg_ram[addr - 0x6000];
+    if (!mmc1_is_wram_disabled()) {
+      return prg_ram[addr - 0x6000];
+    }
+    return 0; // Open Bus
   }
 
   if (addr >= 0x8000) {
@@ -176,7 +234,10 @@ static uint8_t mmc1_cpu_read(uint16_t addr) {
 
 static void mmc1_cpu_write(uint16_t addr, uint8_t val) {
   if (addr >= 0x6000 && addr < 0x8000) {
-    prg_ram[addr - 0x6000] = val;
+    if (!mmc1_is_wram_disabled()) {
+      prg_ram[addr - 0x6000] = val;
+    }
+    return;
   }
   if (addr >= 0x8000) {
     mmc1_update_regs(addr, val);
@@ -516,6 +577,58 @@ static void uxrom_ppu_write(uint16_t addr, uint8_t val) {
   }
 }
 
+// --- Mapper 3 (CNROM) Logic ---
+
+static void cnrom_reset(void) {
+  cnrom_chr_bank = 0;
+  printf("CNROM Reset\n");
+}
+
+static uint8_t cnrom_cpu_read(uint16_t addr) {
+  // CNROM has fixed PRG ROM (16KB or 32KB)
+  // Standard NROM-like behavior for PRG
+  if (addr >= 0x8000) {
+    uint32_t offset = addr - 0x8000;
+    // Mirror 16KB if needed?
+    if (ctx_rom->prg_size == 16384) {
+      offset &= 0x3FFF;
+    }
+    if (offset < ctx_rom->prg_size) {
+      return ctx_rom->prg_data[offset];
+    }
+  }
+  return 0;
+}
+
+static void cnrom_cpu_write(uint16_t addr, uint8_t val) {
+  // $8000-$FFFF: CHR Bank Select
+  if (addr >= 0x8000) {
+    cnrom_chr_bank = val & 0x03; // Usually 2 bits for 32KB max CHR
+  }
+}
+
+static uint8_t cnrom_ppu_read(uint16_t addr) {
+  if (addr < 0x2000 && ctx_rom->chr_data) {
+    // 8KB Banked CHR
+    uint32_t bank = cnrom_chr_bank;
+    uint32_t offset = addr & 0x1FFF; // 8KB window
+    uint32_t phys = (bank * 8192) + offset;
+    return ctx_rom->chr_data[phys % ctx_rom->chr_size];
+  }
+  return 0;
+}
+
+static void cnrom_ppu_write(uint16_t addr, uint8_t val) {
+  // Usually CNROM uses CHR-ROM, so not writable.
+  // But if CHR-RAM is used (unlikely for standard CNROM?), we map it same way.
+  if (addr < 0x2000 && ctx_rom->is_chr_ram && ctx_rom->chr_data) {
+    uint32_t bank = cnrom_chr_bank;
+    uint32_t offset = addr & 0x1FFF;
+    uint32_t phys = (bank * 8192) + offset;
+    ctx_rom->chr_data[phys % ctx_rom->chr_size] = val;
+  }
+}
+
 void mapper_init(ROM *rom) {
   ctx_rom = rom;
   if (rom->mapper_id == 1) {
@@ -526,7 +639,11 @@ void mapper_init(ROM *rom) {
     printf("Mapper 4 (MMC3) Initialized\n");
   } else if (rom->mapper_id == 2) {
     uxrom_reset();
+    uxrom_reset();
     printf("Mapper 2 (UxROM) Initialized\n");
+  } else if (rom->mapper_id == 3) {
+    cnrom_reset();
+    printf("Mapper 3 (CNROM) Initialized\n");
   } else {
     printf("Mapper %d Initialized (NROM)\n", rom->mapper_id);
   }
@@ -543,6 +660,8 @@ uint8_t mapper_cpu_read(uint16_t addr) {
     return mmc3_cpu_read(addr);
   if (ctx_rom->mapper_id == 2)
     return uxrom_cpu_read(addr);
+  if (ctx_rom->mapper_id == 3)
+    return cnrom_cpu_read(addr);
   return 0;
 }
 
@@ -557,6 +676,8 @@ void mapper_cpu_write(uint16_t addr, uint8_t val) {
     mmc3_cpu_write(addr, val);
   if (ctx_rom->mapper_id == 2)
     uxrom_cpu_write(addr, val);
+  if (ctx_rom->mapper_id == 3)
+    cnrom_cpu_write(addr, val);
 }
 
 uint8_t mapper_ppu_read(uint16_t addr) {
@@ -570,6 +691,8 @@ uint8_t mapper_ppu_read(uint16_t addr) {
     return mmc3_ppu_read(addr);
   if (ctx_rom->mapper_id == 2)
     return uxrom_ppu_read(addr);
+  if (ctx_rom->mapper_id == 3)
+    return cnrom_ppu_read(addr);
   return 0;
 }
 
@@ -584,6 +707,8 @@ void mapper_ppu_write(uint16_t addr, uint8_t val) {
     mmc3_ppu_write(addr, val);
   if (ctx_rom->mapper_id == 2)
     uxrom_ppu_write(addr, val);
+  if (ctx_rom->mapper_id == 3)
+    cnrom_ppu_write(addr, val);
 }
 
 uint8_t mapper_get_mirroring(void) {
@@ -597,5 +722,7 @@ uint8_t mapper_get_mirroring(void) {
     return mmc3_get_mirroring();
   if (ctx_rom->mapper_id == 2)
     return ctx_rom->mirroring; // Hardwired in ROM header
+  if (ctx_rom->mapper_id == 3)
+    return ctx_rom->mirroring;
   return ctx_rom->mirroring;
 }

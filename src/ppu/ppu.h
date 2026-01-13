@@ -116,5 +116,6 @@ bool ppu_is_frame_complete(void);
 void ppu_clear_frame_complete(void);
 // Debug Access
 int ppu_get_scanline(void);
+const PPU_State *ppu_get_state(void);
 
 #endif // PPU_H

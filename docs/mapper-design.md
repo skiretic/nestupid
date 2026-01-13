@@ -12,6 +12,15 @@ The emulator currently supports the following iNES mappers:
 - **CHR**: 8KB fixed (or RAM).
 - **Mirroring**: Fixed H/V from header.
 
+## Mapper 3 (CNROM)
+- **PRG**: 16KB/32KB fixed (standard NROM-style PRG).
+- **CHR Banking**:
+  - Entire 8KB CHR space is switchable.
+  - Up to 4 banks (32KB total CHR) usually, registers usually support 2 bits (bits 0-1) but sometimes more (bits 0-7) depending on implementation details. We will support 8 bits.
+- **Registers**:
+  - **Bank Select ($8000-$FFFF)**: Writes to any address in this range select the 8KB CHR bank.
+  - `Bank = Val & 0x03` (Standard CNROM uses bits 0-1, but can be up to 0xFF theoretically).
+
 ## Mapper 2 (UxROM)
 - **PRG Banking**:
   - $8000-$BFFF: 16KB switchable bank.

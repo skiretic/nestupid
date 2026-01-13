@@ -32,6 +32,8 @@ void ppu_reset(void) {
   printf("PPU Reset\n");
 }
 
+const PPU_State *ppu_get_state(void) { return &ppu; }
+
 // Helpers for VRAM increments
 static void ppu_increment_vaddr(void) {
   if (ppu.ctrl & PPU_CTRL_VRAM_INC) {
@@ -131,9 +133,13 @@ uint8_t ppu_read_reg(uint16_t addr) {
   case 7: // PPUDATA
   {
     uint8_t val = ppu.data_buffer;
-    ppu.data_buffer = ppu_vram_read(ppu.v);
-    if (ppu.v >= 0x3F00)
+    uint16_t addr = ppu.v & 0x3FFF;
+    ppu.data_buffer = ppu_vram_read(addr);
+    if (addr >= 0x3F00) {
       val = ppu.data_buffer;
+      // When reading palettes, the buffer is loaded with the mirrored VRAM data
+      ppu.data_buffer = ppu.nametables[ppu_mirror_nametable_addr(addr)];
+    }
     ppu_increment_vaddr();
     return val;
   }

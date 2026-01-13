@@ -1,10 +1,16 @@
 #include "cpu.h"
+#include "../system.h"
 #include "memory.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 static CPU_State cpu;
+static int steps_taken = 0;
+
+// Forward declarations
+uint8_t cpu_read(uint16_t addr);
+void cpu_write(uint16_t addr, uint8_t val);
 
 void cpu_init(void) {
   memset(&cpu, 0, sizeof(CPU_State));
@@ -38,17 +44,8 @@ void cpu_reset(void) {
 }
 
 void cpu_nmi(void) {
-  printf("CPU NMI Triggered!\n");
+  // printf("CPU NMI Triggered!\n");
   cpu.nmi_pending = true;
-  // We can't easily peek vector here without reading it, but we know it's at
-  // FFFA
-  uint8_t lo = cpu_read(0xFFFA);
-  uint8_t hi = cpu_read(0xFFFB);
-  uint16_t vec = (hi << 8) | lo;
-  printf("Code at NMI (%04X): ", vec);
-  for (int i = 0; i < 32; i++)
-    printf("%02X ", cpu_read(vec + i));
-  printf("\n");
 }
 
 void cpu_irq(void) { cpu.irq_pending = true; }
@@ -478,7 +475,6 @@ static void op_rti(void) {
   cpu.p |= FLAG_U;  // Ensure Unused bit is always set
   cpu.p &= ~FLAG_B; // Break flag does not persist in register
   cpu.pc = pop16();
-  printf("RTI Executed. Return to PC: %04X\n", cpu.pc);
 }
 
 static void branch_if(bool condition) {
@@ -532,6 +528,207 @@ static void op_dec_m(uint16_t addr) {
   set_zn(val);
 }
 
+// --- Illegal Opcode Helpers ---
+
+// SLO: ASL + ORA
+static void op_slo(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  if (val & 0x80)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  val <<= 1;
+  cpu_write(addr, val);
+  cpu.a |= val;
+  set_zn(cpu.a);
+}
+
+// RLA: ROL + AND
+static void op_rla(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  uint8_t old_c = (cpu.p & FLAG_C) ? 1 : 0;
+  if (val & 0x80)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  val = (val << 1) | old_c;
+  cpu_write(addr, val);
+  cpu.a &= val;
+  set_zn(cpu.a);
+}
+
+// SRE: LSR + EOR
+static void op_sre(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  if (val & 0x01)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  val >>= 1;
+  cpu_write(addr, val);
+  cpu.a ^= val;
+  set_zn(cpu.a);
+}
+
+// RRA: ROR + ADC
+static void op_rra(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  uint8_t old_c = (cpu.p & FLAG_C) ? 0x80 : 0;
+  if (val & 0x01)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  val = (val >> 1) | old_c;
+  cpu_write(addr, val);
+
+  // ADC logic
+  uint16_t sum = cpu.a + val + (cpu.p & FLAG_C);
+  if (sum > 0xFF)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  if (~(cpu.a ^ val) & (cpu.a ^ sum) & 0x80)
+    cpu.p |= FLAG_V;
+  else
+    cpu.p &= ~FLAG_V;
+  cpu.a = (uint8_t)sum;
+  set_zn(cpu.a);
+}
+
+// DCP: DEC + CMP
+static void op_dcp(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  val--;
+  cpu_write(addr, val);
+  // CMP logic
+  uint8_t diff = cpu.a - val;
+  set_zn(diff);
+  if (cpu.a >= val)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+}
+
+// ISB: INC + SBC
+static void op_isb(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  val++;
+  cpu_write(addr, val);
+  // SBC logic
+  val = ~val;
+  uint16_t sum = cpu.a + val + (cpu.p & FLAG_C);
+  if (sum > 0xFF)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  if (~(cpu.a ^ val) & (cpu.a ^ sum) & 0x80)
+    cpu.p |= FLAG_V;
+  else
+    cpu.p &= ~FLAG_V;
+  cpu.a = (uint8_t)sum;
+  set_zn(cpu.a);
+}
+
+// LAX: LDA + LDX
+static void op_lax(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  cpu.a = val;
+  cpu.x = val;
+  set_zn(val);
+}
+
+// SAX: Store A & X
+static void op_sax(uint16_t addr) { cpu_write(addr, cpu.a & cpu.x); }
+
+// ANC: AND #imm then move bit 7 to C
+static void op_anc(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  cpu.a &= val;
+  set_zn(cpu.a);
+  if (cpu.a & 0x80)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+}
+
+// ALR: AND #imm then LSR A
+static void op_alr(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  cpu.a &= val;
+  if (cpu.a & 0x01)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  cpu.a >>= 1;
+  set_zn(cpu.a);
+}
+
+// ARR: AND #imm then ROR A
+static void op_arr(uint16_t addr) {
+  uint8_t val = cpu_read(addr);
+  val &= cpu.a; // AND behavior
+  uint8_t old_c = (cpu.p & FLAG_C) ? 0x80 : 0;
+  uint8_t new_a = (val >> 1) | old_c;
+  if ((new_a >> 6) & 1)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  if (((new_a >> 6) & 1) ^ ((new_a >> 5) & 1))
+    cpu.p |= FLAG_V;
+  else
+    cpu.p &= ~FLAG_V;
+  cpu.a = new_a;
+  set_zn(cpu.a);
+}
+
+// SBX (AXS): (A & X) - imm -> X
+static void op_sbx(uint16_t addr) {
+  uint8_t imm = cpu_read(addr);
+  uint8_t val = cpu.a & cpu.x;
+  uint8_t diff = val - imm;
+  if (val >= imm)
+    cpu.p |= FLAG_C;
+  else
+    cpu.p &= ~FLAG_C;
+  cpu.x = diff;
+  set_zn(cpu.x);
+}
+
+// SHX (SXA): Store X & (H+1)
+// Unstable: If page cross, High Byte of Address = Value Stored
+static void op_shx_sy(void) {
+  uint16_t base = addr_abs(); // Fetch Base address, PC increments
+  uint16_t addr = base + cpu.y;
+
+  uint8_t hi = (addr >> 8) + 1; // H of target + 1
+  uint8_t val = cpu.x & hi;
+
+  // Page Cross Check: (base page) != (final page)
+  if ((base & 0xFF00) != (addr & 0xFF00)) {
+    // Glitch: Address High becomes the value being stored
+    addr = (val << 8) | (addr & 0xFF);
+  }
+
+  cpu_write(addr, val);
+}
+
+// SHY (SYA): Store Y & (H+1)
+// Unstable: If page cross, High Byte of Address = Value Stored
+static void op_shy_sx(void) {
+  uint16_t base = addr_abs();
+  uint16_t addr = base + cpu.x;
+
+  uint8_t hi = (addr >> 8) + 1;
+  uint8_t val = cpu.y & hi;
+
+  if ((base & 0xFF00) != (addr & 0xFF00)) {
+    // Glitch
+    addr = (val << 8) | (addr & 0xFF);
+  }
+
+  cpu_write(addr, val);
+}
+
 // Assuming CPU_State struct definition is elsewhere...
 /*
   //  bool nmi_pending; // This seems to be already defined as cpu.nmi_pending
@@ -542,13 +739,28 @@ static void op_dec_m(uint16_t addr) {
   int trace_idx;
 */
 
+uint8_t cpu_read(uint16_t addr) {
+  system_step();
+  steps_taken++;
+  return bus_read(addr);
+}
+
+void cpu_write(uint16_t addr, uint8_t val) {
+  system_step();
+  steps_taken++;
+  bus_write(addr, val);
+}
+
 uint8_t cpu_step(void) {
   // Stall if waiting for cycles
   if (cpu.cycles_wait > 0) {
+    system_step();
     cpu.cycles_wait--;
     cpu.total_cycles++;
     return 1;
   }
+
+  steps_taken = 0;
 
   // Handle NMI
   if (cpu.nmi_pending) {
@@ -663,7 +875,59 @@ uint8_t cpu_step(void) {
   // Execute Opcode (Switch)
   switch (opcode) {
   case 0xEA: // NOP
+  case 0x1A: // NOP (Unofficial)
+  case 0x3A: // NOP (Unofficial)
+  case 0x5A: // NOP (Unofficial)
+  case 0x7A: // NOP (Unofficial)
+  case 0xDA: // NOP (Unofficial)
+  case 0xFA: // NOP (Unofficial)
     cpu.cycles_wait = 2;
+    break;
+
+  // NOP / SKB (Skip Byte - Imm)
+  case 0x80:
+  case 0x82:
+  case 0x89:
+  case 0xC2:
+  case 0xE2:
+    addr_imm(); // consume byte
+    cpu.cycles_wait = 2;
+    break;
+
+  // NOP / IGN (Ignore - ZP)
+  case 0x04:
+  case 0x44:
+  case 0x64:
+    cpu_read(addr_zp());
+    cpu.cycles_wait = 3;
+    break;
+
+  // NOP / IGN (Ignore - ZP,X)
+  case 0x14:
+  case 0x34:
+  case 0x54:
+  case 0x74:
+  case 0xD4:
+  case 0xF4:
+    cpu_read(addr_zpx());
+    cpu.cycles_wait = 4;
+    break;
+
+  // NOP / IGN (Ignore - Abs)
+  case 0x0C:
+    cpu_read(addr_abs());
+    cpu.cycles_wait = 4;
+    break;
+
+  // NOP / IGN (Ignore - Abs,X)
+  case 0x1C:
+  case 0x3C:
+  case 0x5C:
+  case 0x7C:
+  case 0xDC:
+  case 0xFC:
+    cpu_read(addr_absx());
+    cpu.cycles_wait = 4; // +1 page cross ignored for now
     break;
 
   // LDA
@@ -1323,9 +1587,284 @@ uint8_t cpu_step(void) {
     op_dec_m(addr_abs());
     cpu.cycles_wait = 6;
     break;
-  case 0xDE:
+  // --- Illegal Opcodes ---
+
+  // LAX
+  case 0xA7:
+    op_lax(addr_zp());
+    cpu.cycles_wait = 3;
+    break;
+  case 0xB7:
+    op_lax(addr_zpy());
+    cpu.cycles_wait = 4;
+    break;
+  case 0xAF:
+    op_lax(addr_abs());
+    cpu.cycles_wait = 4;
+    break;
+  case 0xBF:
+    op_lax(addr_absy());
+    cpu.cycles_wait = 4;
+    break;
+  case 0xA3:
+    op_lax(addr_indx());
+    cpu.cycles_wait = 6;
+    break;
+  case 0xB3:
+    op_lax(addr_indy());
+    cpu.cycles_wait = 5;
+    break;
+
+  // SAX
+  case 0x87:
+    op_sax(addr_zp());
+    cpu.cycles_wait = 3;
+    break;
+  case 0x97:
+    op_sax(addr_zpy());
+    cpu.cycles_wait = 4;
+    break;
+  case 0x8F:
+    op_sax(addr_abs());
+    cpu.cycles_wait = 4;
+    break;
+  case 0x83:
+    op_sax(addr_indx());
+    cpu.cycles_wait = 6;
+    break;
+
+  // SBC (Unofficial)
+  case 0xEB:
+    op_sbc(addr_imm());
+    cpu.cycles_wait = 2;
+    break;
+
+  // DCP
+  case 0xC7:
+    op_dcp(addr_zp());
+    cpu.cycles_wait = 5;
+    break;
+  case 0xD7:
+    op_dcp(addr_zpx());
+    cpu.cycles_wait = 6;
+    break;
+  case 0xCF:
+    op_dcp(addr_abs());
+    cpu.cycles_wait = 6;
+    break;
+  case 0xDF:
+    op_dcp(addr_absx());
+    cpu.cycles_wait = 7;
+    break;
+  case 0xDB:
+    op_dcp(addr_absy());
+    cpu.cycles_wait = 7;
+    break;
+  case 0xC3:
+    op_dcp(addr_indx());
+    cpu.cycles_wait = 8;
+    break;
+  case 0xD3:
+    op_dcp(addr_indy());
+    cpu.cycles_wait = 8;
+    break;
+
+  // ISB
+  case 0xE7:
+    op_isb(addr_zp());
+    cpu.cycles_wait = 5;
+    break;
+  case 0xF7:
+    op_isb(addr_zpx());
+    cpu.cycles_wait = 6;
+    break;
+  case 0xEF:
+    op_isb(addr_abs());
+    cpu.cycles_wait = 6;
+    break;
+  case 0xFF:
+    op_isb(addr_absx());
+    cpu.cycles_wait = 7;
+    break;
+  case 0xFB:
+    op_isb(addr_absy());
+    cpu.cycles_wait = 7;
+    break;
+  case 0xE3:
+    op_isb(addr_indx());
+    cpu.cycles_wait = 8;
+    break;
+  case 0xF3:
+    op_isb(addr_indy());
+    cpu.cycles_wait = 8;
+    break;
+
+  // SLO
+  case 0x07:
+    op_slo(addr_zp());
+    cpu.cycles_wait = 5;
+    break;
+  case 0x17:
+    op_slo(addr_zpx());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x0F:
+    op_slo(addr_abs());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x1F:
+    op_slo(addr_absx());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x1B:
+    op_slo(addr_absy());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x03:
+    op_slo(addr_indx());
+    cpu.cycles_wait = 8;
+    break;
+  case 0x13:
+    op_slo(addr_indy());
+    cpu.cycles_wait = 8;
+    break;
+
+  // RLA
+  case 0x27:
+    op_rla(addr_zp());
+    cpu.cycles_wait = 5;
+    break;
+  case 0x37:
+    op_rla(addr_zpx());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x2F:
+    op_rla(addr_abs());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x3F:
+    op_rla(addr_absx());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x3B:
+    op_rla(addr_absy());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x23:
+    op_rla(addr_indx());
+    cpu.cycles_wait = 8;
+    break;
+  case 0x33:
+    op_rla(addr_indy());
+    cpu.cycles_wait = 8;
+    break;
+
+  // SRE
+  case 0x47:
+    op_sre(addr_zp());
+    cpu.cycles_wait = 5;
+    break;
+  case 0x57:
+    op_sre(addr_zpx());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x4F:
+    op_sre(addr_abs());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x5F:
+    op_sre(addr_absx());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x5B:
+    op_sre(addr_absy());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x43:
+    op_sre(addr_indx());
+    cpu.cycles_wait = 8;
+    break;
+  case 0x53:
+    op_sre(addr_indy());
+    cpu.cycles_wait = 8;
+    break;
+
+  // RRA
+  case 0x67:
+    op_rra(addr_zp());
+    cpu.cycles_wait = 5;
+    break;
+  case 0x77:
+    op_rra(addr_zpx());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x6F:
+    op_rra(addr_abs());
+    cpu.cycles_wait = 6;
+    break;
+  case 0x7F:
+    op_rra(addr_absx());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x7B:
+    op_rra(addr_absy());
+    cpu.cycles_wait = 7;
+    break;
+  case 0x63:
+    op_rra(addr_indx());
+    cpu.cycles_wait = 8;
+    break;
+  case 0x73:
+    op_rra(addr_indy());
+    cpu.cycles_wait = 8;
+    break;
+
+  case 0xDE: // DEC Abs,X
     op_dec_m(addr_absx());
     cpu.cycles_wait = 7;
+    break;
+
+  // ANC
+  case 0x0B:
+  case 0x2B:
+    op_anc(addr_imm());
+    cpu.cycles_wait = 2;
+    break;
+
+  // ALR
+  case 0x4B:
+    op_alr(addr_imm());
+    cpu.cycles_wait = 2;
+    break;
+
+  // ARR
+  case 0x6B:
+    op_arr(addr_imm());
+    cpu.cycles_wait = 2;
+    break;
+
+  // SBX
+  case 0xCB:
+    op_sbx(addr_imm());
+    cpu.cycles_wait = 2;
+    break;
+
+  // LAX #imm (Unstable)
+  case 0xAB:
+    op_lax(addr_imm());
+    cpu.cycles_wait = 2;
+    break;
+
+  // SHX / SXA
+  case 0x9E:
+    op_shx_sy();
+    cpu.cycles_wait = 5;
+    break;
+
+  // SHY / SYA
+  case 0x9C:
+    op_shy_sx();
+    cpu.cycles_wait = 5;
     break;
 
   default:
@@ -1334,12 +1873,14 @@ uint8_t cpu_step(void) {
     break;
   }
 
-  // Correct Timing Logic:
-  // 1. Account for the current cycle (Fetch/Execute)
-  if (cpu.cycles_wait > 0) {
-    cpu.cycles_wait--;
+  // Adjust cycles_wait based on actual steps taken
+  if (cpu.cycles_wait > steps_taken) {
+    cpu.cycles_wait -= steps_taken;
+  } else {
+    cpu.cycles_wait = 0;
   }
-  // 2. Return 1 (One CPU cycle stepped)
+
+  cpu.total_cycles += steps_taken; // + remaining wait in future calls
   return 1;
 }
 
