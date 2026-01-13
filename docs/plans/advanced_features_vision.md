@@ -1,6 +1,6 @@
 # NEStupid: Advanced Features Vision
 
-This document outlines a roadmap for "Modern Convenience" and "Premium Aesthetics" features in NEStupid.
+This document outlines a roadmap for "Modern Convenience" and "Polished Aesthetics" features in NEStupid.
 
 ## 1. Hybrid State Persistence (Rewind & Save States)
 
@@ -38,7 +38,7 @@ To move beyond the raw 256x240 pixel grid, we will introduce modern scaling and 
 
 ---
 
-## 3. Premium Convenience
+## 3. Enhanced Convenience
 
 ### Save State Slots
 - 10 manual slots per ROM, accessible via keyboard shortcuts (F1-F12) or the native macOS menu.
