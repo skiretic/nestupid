@@ -97,7 +97,18 @@ The emulator maps **Controller 1** to the keyboard. Default bindings are:
 - [x] **Sprites**: Secondary OAM evaluation and 8-sprite limit enforcement.
 - [x] **APU**: Complete 2A03 audio support (Pulse, Triangle, Noise, DMC) including mixer and SDL output.
 - [x] **Mappers**: NROM (0), MMC1 (1), UxROM (2), and MMC3 (4) are functional.
+- [ ] **Mappers (Planned)**: CNROM (3).
 - [x] **GUI**: Native macOS integration (Menu, Open ROM, Key Config).
+- [ ] **Refinement**: PPU timing accuracy, APU audio popping/sync fixes.
+
+## Roadmap
+
+For a detailed breakdown of past and future implementation phases, see the [Roadmap](file:///Users/anthony/projects/code/nestupid2/docs/roadmap.md).
+
+### Immediate Priorities
+1.  **Mapper 3 (CNROM)** implementation.
+2.  **Audio Refinements**: Finalizing synchronization and eliminating minor artifacts.
+3.  **Accuracy Improvements**: Enhancing PPU IRQ timing and Nametable mirroring quirks.
 
 ## License
 
